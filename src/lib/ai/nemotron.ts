@@ -14,11 +14,11 @@ const NEMOTRON_API_URL =
   process.env.NEMOTRON_API_URL || 'https://integrate.api.nvidia.com/v1';
 const NEMOTRON_API_KEY = process.env.NEMOTRON_API_KEY || '';
 
-// 모델 설정
+// 모델 설정 - NVIDIA NIM API 실제 모델명
 const MODELS = {
-  orchestrator: 'nvidia/nemotron-mini-4b-instruct', // 빠른 라우팅용
-  solver: 'nvidia/nemotron-4-340b-instruct', // 풀이용
-  verifier: 'nvidia/nemotron-4-340b-instruct', // 검증용
+  orchestrator: 'nvidia/llama-3.1-nemotron-70b-instruct', // 라우팅용
+  solver: 'nvidia/llama-3.1-nemotron-70b-instruct', // 풀이용
+  verifier: 'nvidia/llama-3.1-nemotron-70b-instruct', // 검증용
 };
 
 export interface RoutingResult {

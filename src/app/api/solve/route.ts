@@ -7,6 +7,7 @@ import { validateInput, validateOutput } from '@/lib/guardrails/config';
 
 // 환경 변수로 데모 모드 제어
 const IS_DEMO_MODE = !process.env.NEMOTRON_API_KEY;
+const DEBUG_MODE = process.env.NODE_ENV === 'development' || process.env.DEBUG === 'true';
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
@@ -124,8 +125,17 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error in solve API:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
-      { success: false, error: 'Internal server error' },
+      {
+        success: false,
+        error: DEBUG_MODE ? errorMessage : 'Internal server error',
+        debug: DEBUG_MODE ? {
+          isDemo: IS_DEMO_MODE,
+          hasNemotronKey: !!process.env.NEMOTRON_API_KEY,
+          hasNimKey: !!process.env.NIM_API_KEY,
+        } : undefined,
+      },
       { status: 500 }
     );
   }

@@ -40,7 +40,7 @@ export async function processImageWithNIM(
         Authorization: `Bearer ${NIM_API_KEY}`,
       },
       body: JSON.stringify({
-        model: 'nvidia/neva-22b', // NVIDIA Vision 모델
+        model: 'microsoft/phi-3-vision-128k-instruct', // Vision 모델
         messages: [
           {
             role: 'user',
