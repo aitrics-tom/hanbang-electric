@@ -270,12 +270,26 @@ export function cleanTextFromJSON(text: string, depth: number = 0): string {
   // 4. 코드 블록 제거
   result = result.replace(/```[\s\S]*?```/g, '');
 
-  // 5. JSON 키-값 패턴 제거
+  // 5. JSON 키-값 패턴 제거 (단위 괄호 보존)
+  // 먼저 단위 표기법 임시 보호
+  const unitPlaceholder = '___UNIT_PLACEHOLDER___';
+  const savedUnits: string[] = [];
+  result = result.replace(/(\d+\.?\d*\s*)\[([^\]]{1,10})\]/g, (match) => {
+    savedUnits.push(match);
+    return unitPlaceholder + (savedUnits.length - 1) + unitPlaceholder;
+  });
+
   result = result.replace(/"[a-zA-Z_]+"\s*:\s*"[^"]*"/g, '');
-  result = result.replace(/"[a-zA-Z_]+"\s*:\s*\[[^\]]*\]/g, '');
+  // 배열 패턴은 빈 배열만 제거 (복잡한 배열은 extractBalancedJSON에서 처리)
+  result = result.replace(/"[a-zA-Z_]+"\s*:\s*\[\s*\]/g, '');
   result = result.replace(/"[a-zA-Z_]+"\s*:\s*\{[^}]*\}/g, '');
   result = result.replace(/"[a-zA-Z_]+"\s*:\s*\d+/g, '');
   result = result.replace(/"[a-zA-Z_]+"\s*:\s*(true|false|null)/g, '');
+
+  // 단위 표기법 복원
+  savedUnits.forEach((unit, idx) => {
+    result = result.replace(unitPlaceholder + idx + unitPlaceholder, unit);
+  });
 
   // 6. 빈 괄호 제거
   result = result.replace(/\{\s*\}/g, '');
@@ -318,14 +332,49 @@ export function safeArray<T>(
 
 /**
  * 안전한 문자열 추출
+ * 객체/배열인 경우 의미있는 텍스트 추출 시도
  */
 export function safeString(value: unknown, defaultValue: string = ''): string {
   if (typeof value === 'string') {
     return value;
   }
-  if (value !== null && value !== undefined) {
-    return String(value);
+
+  // 객체인 경우: value+unit 패턴이나 텍스트 필드 추출
+  if (value !== null && value !== undefined && typeof value === 'object') {
+    const obj = value as Record<string, unknown>;
+
+    // { value: 100, unit: "개" } 형태 처리
+    if ('value' in obj && 'unit' in obj) {
+      return `${obj.value} ${obj.unit}`.trim();
+    }
+
+    // { answer: "..." } 형태 처리
+    if ('answer' in obj && typeof obj.answer === 'string') {
+      return obj.answer;
+    }
+
+    // { text: "..." } 형태 처리
+    if ('text' in obj && typeof obj.text === 'string') {
+      return obj.text;
+    }
+
+    // 배열인 경우: [100, "개"] → "100 개"
+    if (Array.isArray(value)) {
+      return value.map(v => String(v)).join(' ').trim();
+    }
+
+    // 그 외 객체는 JSON 문자열화 시도 후 실패하면 기본값
+    try {
+      const jsonStr = JSON.stringify(value);
+      // [object Object] 같은 의미없는 문자열 방지
+      if (jsonStr && !jsonStr.includes('[object')) {
+        return jsonStr;
+      }
+    } catch {
+      // 무시
+    }
   }
+
   return defaultValue;
 }
 
@@ -358,23 +407,27 @@ export function safeBoolean(value: unknown, defaultValue: boolean = false): bool
 /**
  * JSON 아티팩트 잔존 여부 검사
  * 텍스트에 JSON 구조가 남아있는지 확인
+ *
+ * 주의: 단위 표기법 괄호 [등], [lx], [m²], [kW] 등은 JSON으로 간주하지 않음
  */
 export function hasJsonArtifacts(text: string): boolean {
   if (!text) return false;
 
-  // JSON 패턴 검사
+  // 단위 표기법 패턴 (숫자 + 괄호 단위)을 임시 제거하고 검사
+  // 예: "100 [등]", "50 [lx]", "30 [m²]", "2.5 [kW]"
+  const textWithoutUnits = text.replace(/\d+\.?\d*\s*\[[^\]]{1,10}\]/g, '');
+
+  // JSON 패턴 검사 (더 엄격하게)
   const jsonPatterns = [
     /"[a-zA-Z_]+"\s*:/,           // "key":
-    /^\s*\{/,                      // { 로 시작
-    /\}\s*$/,                      // } 로 끝
-    /^\s*\[/,                      // [ 로 시작
-    /\]\s*$/,                      // ] 로 끝
-    /:\s*\{/,                      // : {
-    /:\s*\[/,                      // : [
-    /,\s*"[a-zA-Z_]+"\s*:/,       // , "key":
+    /^\s*\{\s*"/,                  // { " 로 시작 (JSON 객체)
+    /"\s*\}\s*$/,                  // " } 로 끝 (JSON 객체)
+    /:\s*\{/,                      // : { (중첩 객체)
+    /:\s*\[/,                      // : [ (배열 값)
+    /,\s*"[a-zA-Z_]+"\s*:/,       // , "key": (연속 키)
   ];
 
-  return jsonPatterns.some(pattern => pattern.test(text));
+  return jsonPatterns.some(pattern => pattern.test(textWithoutUnits));
 }
 
 /**
@@ -500,8 +553,26 @@ export function ensureCleanText(text: string, fallbackMessage: string = '텍스�
 
   // 최종 검증
   if (result.length < 5 || hasJsonArtifacts(result)) {
-    // 마지막 시도: 모든 JSON 관련 문자 제거
-    result = result.replace(/[{}\[\]"]/g, ' ').replace(/\s+/g, ' ').trim();
+    // 마지막 시도: JSON 관련 문자 제거 (단위 괄호는 보존)
+    // 1. 먼저 단위 표기법 괄호를 임시 마커로 치환
+    const unitMarker = '___UNIT___';
+    const units: string[] = [];
+    result = result.replace(/(\d+\.?\d*\s*)\[([^\]]{1,10})\]/g, (match, num, unit) => {
+      units.push(`${num.trim()} [${unit}]`);
+      return unitMarker + (units.length - 1) + unitMarker;
+    });
+
+    // 2. JSON 괄호 제거
+    result = result.replace(/[{}"]/g, ' ');
+    // 단위 마커가 없는 빈 괄호만 제거
+    result = result.replace(/\[\s*\]/g, ' ');
+
+    // 3. 단위 표기법 복원
+    units.forEach((unit, idx) => {
+      result = result.replace(unitMarker + idx + unitMarker, unit);
+    });
+
+    result = result.replace(/\s+/g, ' ').trim();
   }
 
   return result.length > 0 ? result : fallbackMessage;

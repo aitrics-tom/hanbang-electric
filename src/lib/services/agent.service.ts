@@ -478,13 +478,21 @@ JSON 응답:
 
     // 2. 여전히 JSON 아티팩트가 있으면 추가 정리
     if (hasJsonArtifacts(cleaned)) {
+      // 단위 표기법 임시 보호 (예: "100 [등]", "50 [lx]")
+      const unitMarker = '___UNIT_TEMP___';
+      const savedUnits: string[] = [];
+      cleaned = cleaned.replace(/(\d+\.?\d*\s*)\[([^\]]{1,10})\]/g, (match) => {
+        savedUnits.push(match);
+        return unitMarker + (savedUnits.length - 1) + unitMarker;
+      });
+
       // 코드 블록 제거
       cleaned = cleaned.replace(/```(?:json|javascript|typescript|js|ts)?\s*[\s\S]*?```/gi, '');
       cleaned = cleaned.replace(/```/g, '');
 
       // JSON 키-값 패턴 제거
       cleaned = cleaned.replace(/"[a-zA-Z_]+"\s*:\s*"[^"]*"/g, '');
-      cleaned = cleaned.replace(/"[a-zA-Z_]+"\s*:\s*\[[^\]]*\]/g, '');
+      cleaned = cleaned.replace(/"[a-zA-Z_]+"\s*:\s*\[\s*\]/g, ''); // 빈 배열만
       cleaned = cleaned.replace(/"[a-zA-Z_]+"\s*:\s*\{[^}]*\}/g, '');
       cleaned = cleaned.replace(/"[a-zA-Z_]+"\s*:\s*[\d.]+/g, '');
       cleaned = cleaned.replace(/"[a-zA-Z_]+"\s*:/g, '');
@@ -492,6 +500,11 @@ JSON 응답:
       // 단독 중괄호/대괄호 쌍 제거
       cleaned = cleaned.replace(/\{\s*\}/g, '');
       cleaned = cleaned.replace(/\[\s*\]/g, '');
+
+      // 단위 표기법 복원
+      savedUnits.forEach((unit, idx) => {
+        cleaned = cleaned.replace(unitMarker + idx + unitMarker, unit);
+      });
     }
 
     // 3. 연속 줄바꿈 정리

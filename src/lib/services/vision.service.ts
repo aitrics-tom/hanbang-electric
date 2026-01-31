@@ -173,11 +173,12 @@ export class VisionService {
 
     try {
       // Gemini 2.0 Flash for vision (빠르고 저렴)
+      // 토큰 제한을 4096으로 증가 - 긴 문제/표 포함 이미지 지원
       const model = this.genAI.getGenerativeModel({
         model: 'gemini-3-flash-preview',
         generationConfig: {
           temperature: 0.1,
-          maxOutputTokens: 2048,
+          maxOutputTokens: 4096,
         },
       });
 
