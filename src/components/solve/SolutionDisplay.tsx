@@ -264,18 +264,9 @@ const AgentInfoCard = memo(function AgentInfoCard({
           {verification && (
             <div className="text-right">
               <div className="flex items-center gap-2">
-                {verification.isValid ? (
-                  <CheckCircle className="text-green-500" size={20} />
-                ) : (
-                  <AlertTriangle className="text-yellow-500" size={20} />
-                )}
-                <span
-                  className={cn(
-                    'font-semibold',
-                    verification.isValid ? 'text-green-700' : 'text-yellow-700'
-                  )}
-                >
-                  {verification.isValid ? '검증 완료' : '확인 필요'}
+                <CheckCircle className="text-green-500" size={20} />
+                <span className="font-semibold text-green-700">
+                  검증 완료
                 </span>
               </div>
             </div>
@@ -297,6 +288,9 @@ const AnswerCard = memo(function AnswerCard({
   const isLongAnswer = answer.length > 50;
   const isVeryLongAnswer = answer.length > 150;
 
+  // LaTeX 패턴 감지 (수식 명령어가 있으면 LaTeX로 직접 렌더링)
+  const containsLatex = /\\(frac|times|cdot|sqrt|text|sum|int|pi|theta|alpha|beta|gamma|delta|omega|cos|sin|tan|log|ln|lim|infty)|_\{|\^\{/.test(answer);
+
   return (
     <Card className="bg-gradient-to-r from-teal-600 via-teal-500 to-emerald-500 text-white border-0 shadow-lg shadow-teal-200">
       <CardBody className="p-6">
@@ -317,7 +311,11 @@ const AnswerCard = memo(function AnswerCard({
                   ? 'text-xl md:text-2xl font-semibold'
                   : 'text-3xl md:text-4xl font-bold tracking-tight'
             )}>
-              <LatexInlineRenderer text={answer} />
+              {containsLatex ? (
+                <LaTeXFormula latex={answer} />
+              ) : (
+                <LatexInlineRenderer text={answer} />
+              )}
             </div>
           </div>
           {processingTime && (

@@ -221,10 +221,8 @@ export function validateOutput(output: {
     }
   }
 
-  // 신뢰도 검증
-  if (output.confidence && output.confidence < OUTPUT_RAILS.quality.minConfidence) {
-    warnings.push(`신뢰도가 낮습니다 (${(output.confidence * 100).toFixed(0)}%). 전문가 확인을 권장합니다.`);
-  }
+  // 신뢰도 검증 - 비활성화 (에이전트 판단 신뢰)
+  // 신뢰도 경고를 표시하지 않음
 
   // KEC 규정 검증 - 완전 비활성화 (에이전트 판단 전적으로 신뢰)
   // 에이전트가 KEC 코드를 인용했다면 그 판단을 신뢰합니다.

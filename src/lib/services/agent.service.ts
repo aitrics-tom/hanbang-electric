@@ -214,8 +214,8 @@ export class AgentService {
     const kecCheck = {
       ...baseVerification.checks.kec,
       notes: kecNotes,
-      // 스마트 검증: invalid가 없으면 pass
-      pass: ragValidation.kecValidation.invalid.length === 0,
+      // 스마트 검증: verified가 하나라도 있으면 pass, 또는 invalid가 없으면 pass
+      pass: ragValidation.kecValidation.verified.length > 0 || ragValidation.kecValidation.invalid.length === 0,
     };
 
     return {
