@@ -40,27 +40,25 @@ export async function processImageWithNIM(
         Authorization: `Bearer ${NIM_API_KEY}`,
       },
       body: JSON.stringify({
-        model: 'microsoft/phi-3-vision-128k-instruct', // Vision 모델
+        model: 'meta/llama-3.2-11b-vision-instruct', // Vision 모델
         messages: [
           {
             role: 'user',
             content: [
               {
-                type: 'text',
-                text: `이 이미지는 전기기사 실기 시험 문제입니다. 다음을 수행해주세요:
-
-1. 이미지에서 모든 텍스트를 정확하게 추출하세요.
-2. 수학 공식이나 수식은 LaTeX 형식으로 변환하세요. (예: $P = VI$)
-3. 회로도나 다이어그램이 있다면 설명을 추가하세요.
-4. 단위(예: kW, A, Ω)를 정확하게 인식하세요.
-
-추출된 문제 내용을 한국어로 정리해주세요.`,
-              },
-              {
                 type: 'image_url',
                 image_url: {
-                  url: `data:image/jpeg;base64,${base64Data}`,
+                  url: `data:image/png;base64,${base64Data}`,
                 },
+              },
+              {
+                type: 'text',
+                text: `이 이미지는 한국 전기기사 실기 시험 문제입니다.
+
+이미지에서 모든 텍스트를 정확하게 추출해주세요.
+숫자, 단위(kW, A, Ω, ton, m/min 등), 수식을 정확히 인식해주세요.
+
+추출된 문제 내용만 출력해주세요.`,
               },
             ],
           },
