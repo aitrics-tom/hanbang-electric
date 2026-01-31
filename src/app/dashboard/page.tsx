@@ -1,240 +1,263 @@
+/**
+ * Dashboard Page - 학습 대시보드 (Supabase 연동)
+ *
+ * Features:
+ * - 실시간 학습 통계
+ * - 카테고리별 진도
+ * - AI 기반 취약점 분석
+ * - 질문 이력
+ */
+
 'use client';
 
-import { Header } from '@/components/layout/Header';
-import { DdayWidget } from '@/components/dashboard/DdayWidget';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { AGENTS } from '@/lib/ai/agents';
-import { TrendingUp, BookOpen, Target, Clock } from 'lucide-react';
+// Force dynamic rendering - this page uses Supabase auth
+export const dynamic = 'force-dynamic';
+
+import React, { Suspense, useCallback, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { Navbar, Footer } from '@/components/layout';
+import { Card, CardHeader, CardBody } from '@/components/common';
+import { StatsCard, StatsCardSkeleton } from '@/components/dashboard/StatsCard';
+import { CategoryChart, CategoryChartSkeleton } from '@/components/dashboard/CategoryChart';
+import { WeakPointAlert } from '@/components/dashboard/WeakPointAlert';
+import { AnalyticsModal } from '@/components/dashboard/AnalyticsModal';
+import { HistoryList, HistoryListSkeleton } from '@/components/dashboard/HistoryList';
+import { useAuth } from '@/hooks/useAuth';
+import { useStats } from '@/hooks/useStats';
+import { useQuestionHistory } from '@/hooks/useQuestionHistory';
+import { useAnalytics } from '@/hooks/useAnalytics';
 
 export default function DashboardPage() {
-  // 데모 데이터
-  const stats = {
-    totalSolved: 127,
-    todaySolved: 8,
-    streak: 5,
-    accuracy: 78,
-  };
+  const router = useRouter();
+  const { user, isLoading: authLoading, isAuthenticated } = useAuth();
+  const { stats, isLoading: statsLoading, error: statsError, refresh: refreshStats } = useStats();
+  const {
+    sessions,
+    hasMore,
+    isLoading: historyLoading,
+    loadMore,
+    deleteSession,
+    updateSessionFeedback,
+  } = useQuestionHistory({ limit: 10 });
+  const {
+    analytics,
+    savedInsights,
+    isLoading: analyticsLoading,
+    isGenerating,
+    generateAnalytics,
+    dismissInsight,
+  } = useAnalytics();
 
-  const categoryStats = [
-    { id: 'LOAD', count: 35, accuracy: 82 },
-    { id: 'DESIGN', count: 28, accuracy: 75 },
-    { id: 'SEQUENCE', count: 24, accuracy: 71 },
-    { id: 'KEC', count: 18, accuracy: 85 },
-    { id: 'POWER', count: 14, accuracy: 79 },
-    { id: 'RENEWABLE', count: 8, accuracy: 88 },
-  ];
+  // AI 학습 분석 모달 상태
+  const [showAnalyticsModal, setShowAnalyticsModal] = useState(false);
 
-  const recentSolutions = [
-    { title: '조명 등수 계산', category: 'LOAD', time: '2시간 전', correct: true },
-    { title: '변압기 용량 산정', category: 'DESIGN', time: '3시간 전', correct: true },
-    { title: 'PLC 래더 다이어그램', category: 'SEQUENCE', time: '어제', correct: false },
-    { title: '접지저항 계산', category: 'KEC', time: '어제', correct: true },
-  ];
+  // 세션 삭제 후 통계 갱신
+  const handleDeleteSession = useCallback(async (sessionId: string) => {
+    const success = await deleteSession(sessionId);
+    if (success) {
+      // 삭제 성공 시 통계도 갱신
+      await refreshStats();
+    }
+  }, [deleteSession, refreshStats]);
+
+  // 피드백 업데이트 후 통계 갱신
+  const handleFeedbackUpdate = useCallback((sessionId: string, isCorrect: boolean) => {
+    updateSessionFeedback(sessionId, isCorrect);
+    // 통계도 갱신 (정답/오답 수가 변경됨)
+    refreshStats();
+  }, [updateSessionFeedback, refreshStats]);
+
+  // 로그인 체크
+  if (!authLoading && !isAuthenticated) {
+    router.push('/login?redirectTo=/dashboard');
+    return null;
+  }
+
+  const isLoading = authLoading || statsLoading;
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
+    <div className="min-h-screen bg-slate-50">
+      <Navbar />
 
-      <main className="container py-8">
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold mb-2">대시보드</h1>
-          <p className="text-muted-foreground">학습 현황을 확인하세요</p>
+      <main className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8 space-y-8">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900">학습 대시보드</h1>
+            <p className="text-slate-600 mt-1">
+              {user?.user_metadata?.full_name || user?.email}님의 학습 현황
+            </p>
+          </div>
+          <button
+            onClick={() => setShowAnalyticsModal(true)}
+            disabled={isGenerating}
+            className="px-4 py-2 bg-teal-500 text-white rounded-lg font-medium hover:bg-teal-600 transition-colors disabled:opacity-50 flex items-center gap-2"
+          >
+            <span>🔍</span>
+            AI 학습 분석
+          </button>
         </div>
 
-        <div className="grid lg:grid-cols-3 gap-8">
-          {/* 왼쪽: 통계 */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* 요약 카드 */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <StatCard
-                icon={<BookOpen className="h-5 w-5" />}
-                label="총 풀이"
-                value={stats.totalSolved}
-                suffix="문제"
-              />
-              <StatCard
-                icon={<Target className="h-5 w-5" />}
-                label="오늘"
-                value={stats.todaySolved}
-                suffix="문제"
-              />
-              <StatCard
-                icon={<TrendingUp className="h-5 w-5" />}
-                label="정답률"
-                value={stats.accuracy}
-                suffix="%"
-              />
-              <StatCard
-                icon={<Clock className="h-5 w-5" />}
-                label="연속 학습"
-                value={stats.streak}
-                suffix="일"
-              />
-            </div>
+        {/* Error State */}
+        {statsError && (
+          <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700">
+            {statsError}
+          </div>
+        )}
 
-            {/* 과목별 현황 */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">과목별 현황</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {categoryStats.map((stat) => {
-                  const agent = AGENTS[stat.id as keyof typeof AGENTS];
-                  return (
-                    <div key={stat.id} className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span>{agent.icon}</span>
-                          <span className="font-medium">{agent.name}</span>
-                        </div>
-                        <div className="flex items-center gap-4 text-sm">
-                          <span className="text-muted-foreground">
-                            {stat.count}문제
-                          </span>
-                          <Badge
-                            variant={stat.accuracy >= 80 ? 'default' : 'secondary'}
-                          >
-                            {stat.accuracy}%
-                          </Badge>
-                        </div>
-                      </div>
-                      <Progress value={stat.accuracy} className="h-2" />
-                    </div>
-                  );
-                })}
-              </CardContent>
-            </Card>
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {isLoading ? (
+            <>
+              <StatsCardSkeleton />
+              <StatsCardSkeleton />
+              <StatsCardSkeleton />
+            </>
+          ) : (
+            <>
+              <StatsCard
+                title="총 풀이"
+                value={stats?.totalQuestions || 0}
+                subtitle="문제"
+                icon="📚"
+                color="teal"
+              />
+              <StatsCard
+                title="오늘"
+                value={stats?.todayCount || 0}
+                subtitle={`/ ${stats?.dailyGoal || 10} 목표`}
+                icon="🎯"
+                color="blue"
+              />
+              <StatsCard
+                title="연속 학습"
+                value={stats?.currentStreak || 0}
+                subtitle={`최장 ${stats?.longestStreak || 0}일`}
+                icon="🔥"
+                color="purple"
+              />
+            </>
+          )}
+        </div>
 
-            {/* 최근 풀이 */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">최근 풀이</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {recentSolutions.map((sol, i) => {
-                    const agent = AGENTS[sol.category as keyof typeof AGENTS];
-                    return (
-                      <div
-                        key={i}
-                        className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div
-                            className="w-8 h-8 rounded-lg flex items-center justify-center text-lg"
-                            style={{ backgroundColor: `${agent.color}20` }}
-                          >
-                            {agent.icon}
-                          </div>
-                          <div>
-                            <p className="font-medium">{sol.title}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {agent.name} · {sol.time}
-                            </p>
-                          </div>
-                        </div>
-                        <Badge
-                          variant={sol.correct ? 'default' : 'destructive'}
-                        >
-                          {sol.correct ? '정답' : '오답'}
-                        </Badge>
-                      </div>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
+        {/* AI Insights */}
+        {!analyticsLoading && savedInsights.length > 0 && (
+          <WeakPointAlert
+            insights={savedInsights}
+            onDismiss={dismissInsight}
+          />
+        )}
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Category Chart */}
+          <div className="lg:col-span-2">
+            {isLoading ? (
+              <CategoryChartSkeleton />
+            ) : (
+              <CategoryChart stats={stats?.categoryStats || []} />
+            )}
           </div>
 
-          {/* 오른쪽: 사이드바 */}
+          {/* Learning Goal & Quick Actions */}
           <div className="space-y-6">
-            <DdayWidget streak={stats.streak} />
-
-            {/* 학습 목표 */}
+            {/* Daily Progress */}
             <Card>
-              <CardHeader>
-                <CardTitle className="text-base">오늘의 목표</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
+              <CardHeader>오늘의 학습 목표</CardHeader>
+              <CardBody className="space-y-4">
+                <div className="bg-slate-50 p-4 rounded-xl">
                   <div className="flex justify-between text-sm mb-2">
-                    <span>문제 풀이</span>
-                    <span className="text-muted-foreground">
-                      {stats.todaySolved}/10
+                    <span className="text-slate-600">문제 학습</span>
+                    <span className="font-bold text-teal-700">
+                      {stats?.todayCount || 0}/{stats?.dailyGoal || 10}
                     </span>
                   </div>
-                  <Progress value={(stats.todaySolved / 10) * 100} />
-                </div>
-                <div>
-                  <div className="flex justify-between text-sm mb-2">
-                    <span>정답률</span>
-                    <span className="text-muted-foreground">
-                      {stats.accuracy}%/80%
-                    </span>
+                  <div className="w-full bg-slate-200 rounded-full h-2">
+                    <div
+                      className="bg-teal-500 h-2 rounded-full transition-all"
+                      style={{
+                        width: `${Math.min(
+                          ((stats?.todayCount || 0) / (stats?.dailyGoal || 10)) * 100,
+                          100
+                        )}%`,
+                      }}
+                    />
                   </div>
-                  <Progress value={(stats.accuracy / 80) * 100} />
                 </div>
-              </CardContent>
+
+                <button
+                  onClick={() => router.push('/solve')}
+                  className="w-full py-3 bg-slate-900 text-white rounded-lg font-medium hover:bg-slate-800 transition-colors"
+                >
+                  학습하러 가기
+                </button>
+              </CardBody>
             </Card>
 
-            {/* 추천 학습 */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">추천 학습</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span>⚡</span>
-                    <span className="font-medium text-sm">시퀀스/PLC</span>
+            {/* Activity Heatmap */}
+            {stats?.recentActivity && stats.recentActivity.length > 0 && (
+              <Card>
+                <CardHeader>최근 7일 활동</CardHeader>
+                <CardBody>
+                  <div className="flex justify-between">
+                    {stats.recentActivity.map((day) => (
+                      <div key={day.date} className="text-center">
+                        <div
+                          className={`w-8 h-8 rounded-lg mb-1 flex items-center justify-center text-xs font-medium ${
+                            day.count >= 10
+                              ? 'bg-teal-500 text-white'
+                              : day.count >= 5
+                              ? 'bg-teal-300 text-teal-800'
+                              : day.count > 0
+                              ? 'bg-teal-100 text-teal-600'
+                              : 'bg-slate-100 text-slate-400'
+                          }`}
+                        >
+                          {day.count}
+                        </div>
+                        <span className="text-[10px] text-slate-500">
+                          {new Date(day.date).toLocaleDateString('ko-KR', { weekday: 'short' })}
+                        </span>
+                      </div>
+                    ))}
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    정답률이 낮습니다. 복습을 추천드려요.
-                  </p>
-                </div>
-                <div className="p-3 rounded-lg bg-muted/50">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span>📋</span>
-                    <span className="font-medium text-sm">KEC규정</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    최근 풀이가 없습니다. 연습해보세요.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+                </CardBody>
+              </Card>
+            )}
           </div>
+        </div>
+
+        {/* Question History */}
+        <div>
+          <h2 className="text-lg font-semibold text-slate-900 mb-4">최근 풀이 이력</h2>
+          {historyLoading && sessions.length === 0 ? (
+            <HistoryListSkeleton />
+          ) : (
+            <HistoryList
+              sessions={sessions}
+              hasMore={hasMore}
+              isLoading={historyLoading}
+              onLoadMore={loadMore}
+              onDelete={handleDeleteSession}
+              onFeedbackUpdate={handleFeedbackUpdate}
+            />
+          )}
         </div>
       </main>
-    </div>
-  );
-}
 
-function StatCard({
-  icon,
-  label,
-  value,
-  suffix,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: number;
-  suffix: string;
-}) {
-  return (
-    <Card>
-      <CardContent className="pt-6">
-        <div className="flex items-center gap-2 text-muted-foreground mb-2">
-          {icon}
-          <span className="text-sm">{label}</span>
-        </div>
-        <div className="flex items-baseline gap-1">
-          <span className="text-2xl font-bold">{value}</span>
-          <span className="text-sm text-muted-foreground">{suffix}</span>
-        </div>
-      </CardContent>
-    </Card>
+      <Footer />
+
+      {/* AI 학습 분석 모달 */}
+      <AnalyticsModal
+        open={showAnalyticsModal}
+        onClose={() => setShowAnalyticsModal(false)}
+        isGenerating={isGenerating}
+        analytics={analytics}
+        categoryStats={stats?.categoryStats || []}
+        onGenerateAnalytics={generateAnalytics}
+        onStartStudy={(category) => {
+          router.push(`/solve?category=${category}`);
+        }}
+      />
+    </div>
   );
 }

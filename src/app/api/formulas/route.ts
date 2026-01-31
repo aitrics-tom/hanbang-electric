@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
   const search = searchParams.get('search');
 
   try {
-    let formulas = formulaWhitelist.categories;
+    const formulas = formulaWhitelist.categories;
 
     // 카테고리 필터
     if (category) {

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Header } from '@/components/layout/Header';
+import { Navbar, Footer } from '@/components/layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -163,12 +163,12 @@ export default function FormulasPage() {
   const categories = Object.keys(formulaData);
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      <main className="container mx-auto px-4 py-8 max-w-6xl">
+    <div className="min-h-screen bg-slate-50">
+      <Navbar />
+      <main className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">공식 라이브러리</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl font-bold text-slate-900">공식 라이브러리</h1>
+          <p className="text-slate-600 mt-1">
             전기기사 실기 시험에 필요한 핵심 공식 모음
           </p>
         </div>
@@ -246,6 +246,7 @@ export default function FormulasPage() {
           ))}
         </Tabs>
       </main>
+      <Footer />
     </div>
   );
 }

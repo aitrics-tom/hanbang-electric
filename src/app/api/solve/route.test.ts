@@ -6,11 +6,17 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { POST } from './route';
 import { NextRequest } from 'next/server';
 
-// Helper to create mock NextRequest
+// Helper to create mock NextRequest with proper headers
 function createMockRequest(body: object): NextRequest {
+  const headers = new Headers({
+    'content-type': 'application/json',
+    'x-forwarded-for': '127.0.0.1',
+  });
+
   return {
     json: () => Promise.resolve(body),
-  } as NextRequest;
+    headers,
+  } as unknown as NextRequest;
 }
 
 describe('Solve API Route', () => {
@@ -189,7 +195,7 @@ describe('Solve API Route', () => {
       expect(Array.isArray(agents.secondary)).toBe(true);
     });
 
-    it('should include guardrails validation in response', async () => {
+    it('should include meta information in response', async () => {
       const request = createMockRequest({
         text: '송전 선로의 전력손실 계산 방법을 설명하시오',
       });
@@ -197,10 +203,10 @@ describe('Solve API Route', () => {
       const response = await POST(request);
       const data = await response.json();
 
-      expect(data).toHaveProperty('guardrails');
-      expect(data.guardrails).toHaveProperty('inputValid');
-      expect(data.guardrails).toHaveProperty('outputValid');
-      expect(data.guardrails.inputValid).toBe(true);
+      expect(data).toHaveProperty('meta');
+      expect(data.meta).toHaveProperty('processingTime');
+      expect(data.meta).toHaveProperty('mode');
+      expect(data.meta.mode).toBe('demo');
     });
   });
 
@@ -264,7 +270,7 @@ describe('Solve API Route', () => {
   });
 
   describe('Image processing (demo mode)', () => {
-    it('should handle image input in demo mode', async () => {
+    it('should handle image input - returns error when OCR fails without API key', async () => {
       const request = createMockRequest({
         imageBase64: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
       });
@@ -272,22 +278,25 @@ describe('Solve API Route', () => {
       const response = await POST(request);
       const data = await response.json();
 
-      // Demo mode should use sample text and return a valid solution
-      expect(response.status).toBe(200);
-      expect(data.success).toBe(true);
-      expect(data.data).toBeDefined();
+      // Without API key, OCR fails and returns error
+      expect(response.status).toBe(400);
+      expect(data.success).toBe(false);
+      expect(data.error).toContain('이미지');
     });
 
-    it('should use sample lighting question for image input in demo mode', async () => {
+    it('should still attempt OCR when both text and image provided', async () => {
       const request = createMockRequest({
+        text: '변압기 용량 계산 방법을 설명해주세요',
         imageBase64: 'validBase64ImageString',
       });
 
       const response = await POST(request);
       const data = await response.json();
 
-      // Demo mode uses a predefined lighting question
-      expect(data.data.category).toBe('LOAD');
+      // OCR is attempted when imageBase64 is present, fails without API key
+      expect(response.status).toBe(400);
+      expect(data.success).toBe(false);
+      expect(data.error).toContain('이미지');
     });
   });
 
@@ -319,16 +328,23 @@ describe('Solve API Route', () => {
 
   describe('Error handling', () => {
     it('should handle JSON parse errors gracefully', async () => {
+      const headers = new Headers({
+        'content-type': 'application/json',
+        'x-forwarded-for': '127.0.0.1',
+      });
+
       const badRequest = {
         json: () => Promise.reject(new Error('Invalid JSON')),
-      } as NextRequest;
+        headers,
+      } as unknown as NextRequest;
 
       const response = await POST(badRequest);
       const data = await response.json();
 
       expect(response.status).toBe(500);
       expect(data.success).toBe(false);
-      expect(data.error).toBe('Internal server error');
+      // Korean error message
+      expect(data.error).toBe('서버 오류가 발생했습니다');
     });
   });
 

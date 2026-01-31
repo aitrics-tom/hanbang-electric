@@ -12,7 +12,7 @@ export function Header() {
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
             <Zap className="h-5 w-5" />
           </div>
-          <span className="text-xl font-bold">전실 AI</span>
+          <span className="text-xl font-bold">한방전기</span>
         </Link>
 
         <nav className="flex items-center gap-4">

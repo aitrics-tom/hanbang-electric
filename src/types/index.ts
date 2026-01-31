@@ -17,24 +17,6 @@ export interface AgentInfo {
   description: string;
 }
 
-// OCR 결과
-export interface OCRResult {
-  text: string;
-  mathExpressions: string[];
-  confidence: number;
-  processingTime: number;
-}
-
-// 라우팅 결정
-export interface RoutingDecision {
-  primaryAgent: AgentType;
-  secondaryAgents: AgentType[];
-  confidence: number;
-  reasoning: string;
-  extractedQuestion: string;
-  keywords: string[];
-}
-
 // 풀이 단계
 export interface SolutionStep {
   order: number;
@@ -74,36 +56,4 @@ export interface SolutionResponse {
   };
   processingTime: number;
   createdAt: Date;
-}
-
-// 사용자 통계
-export interface UserStats {
-  totalSolved: number;
-  byCategory: Record<AgentType, number>;
-  streak: number;
-  lastStudyDate: Date;
-  weeklyData: {
-    date: string;
-    count: number;
-  }[];
-}
-
-// 시험 일정
-export interface ExamSchedule {
-  id: string;
-  name: string;
-  date: Date;
-  type: 'written' | 'practical';
-}
-
-// API 요청/응답
-export interface SolveRequest {
-  text?: string;
-  imageBase64?: string;
-}
-
-export interface SolveAPIResponse {
-  success: boolean;
-  data?: SolutionResponse;
-  error?: string;
 }
