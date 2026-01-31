@@ -20,7 +20,7 @@ import { classifyQuestion, AGENTS } from '@/lib/ai/agents';
 import { VisionAnalysisResult } from './vision.service';
 import { logger } from '@/lib/api/logger';
 import { ragContextService, ragValidator, RAGContext, ValidationResult } from '@/lib/rag';
-import { parseAIResponse, safeArray, safeString, safeNumber } from '@/lib/utils/jsonParser';
+import { parseAIResponse, safeArray, safeString, safeNumber, ensureCleanText, hasJsonArtifacts } from '@/lib/utils/jsonParser';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
 
@@ -123,10 +123,16 @@ export class AgentService {
     // RAG 검증 결과를 기존 검증에 병합
     const mergedVerification = this.mergeVerification(verification, ragValidation);
 
+    // question 필드에서 JSON 아티팩트 완전 제거
+    const cleanedQuestion = ensureCleanText(
+      visionResult.extractedText,
+      visionResult.extractedText
+    );
+
     return {
       solution: {
         id: `sol-${Date.now()}`,
-        question: visionResult.extractedText,
+        question: cleanedQuestion,
         category: agent,
         solution: solution.summary,
         answer: solution.answer,
@@ -467,33 +473,38 @@ JSON 응답:
   private sanitizeProblemText(text: string): string {
     if (!text) return '문제를 인식할 수 없습니다.';
 
-    let cleaned = text;
+    // 1. 먼저 ensureCleanText로 JSON 아티팩트 제거
+    let cleaned = ensureCleanText(text, text);
 
-    // 1. 코드 블록 제거 (```json, ```, 등)
-    cleaned = cleaned.replace(/```(?:json|javascript|typescript|js|ts)?\s*[\s\S]*?```/gi, '');
-    cleaned = cleaned.replace(/```/g, '');
+    // 2. 여전히 JSON 아티팩트가 있으면 추가 정리
+    if (hasJsonArtifacts(cleaned)) {
+      // 코드 블록 제거
+      cleaned = cleaned.replace(/```(?:json|javascript|typescript|js|ts)?\s*[\s\S]*?```/gi, '');
+      cleaned = cleaned.replace(/```/g, '');
 
-    // 2. JSON 키-값 패턴 제거
-    cleaned = cleaned.replace(/"[a-zA-Z_]+"\s*:\s*"[^"]*"/g, '');
-    cleaned = cleaned.replace(/"[a-zA-Z_]+"\s*:\s*\[[^\]]*\]/g, '');
-    cleaned = cleaned.replace(/"[a-zA-Z_]+"\s*:\s*\{[^}]*\}/g, '');
-    cleaned = cleaned.replace(/"[a-zA-Z_]+"\s*:\s*[\d.]+/g, '');
-    cleaned = cleaned.replace(/"[a-zA-Z_]+"\s*:/g, '');
+      // JSON 키-값 패턴 제거
+      cleaned = cleaned.replace(/"[a-zA-Z_]+"\s*:\s*"[^"]*"/g, '');
+      cleaned = cleaned.replace(/"[a-zA-Z_]+"\s*:\s*\[[^\]]*\]/g, '');
+      cleaned = cleaned.replace(/"[a-zA-Z_]+"\s*:\s*\{[^}]*\}/g, '');
+      cleaned = cleaned.replace(/"[a-zA-Z_]+"\s*:\s*[\d.]+/g, '');
+      cleaned = cleaned.replace(/"[a-zA-Z_]+"\s*:/g, '');
 
-    // 3. 단독 중괄호/대괄호 쌍 제거 (비어있는 경우)
-    cleaned = cleaned.replace(/\{\s*\}/g, '');
-    cleaned = cleaned.replace(/\[\s*\]/g, '');
+      // 단독 중괄호/대괄호 쌍 제거
+      cleaned = cleaned.replace(/\{\s*\}/g, '');
+      cleaned = cleaned.replace(/\[\s*\]/g, '');
+    }
 
-    // 4. 연속 줄바꿈 정리
+    // 3. 연속 줄바꿈 정리
     cleaned = cleaned.replace(/\n{3,}/g, '\n\n');
     cleaned = cleaned.replace(/[ \t]{2,}/g, ' ');
 
-    // 5. 앞뒤 공백 제거
+    // 4. 앞뒤 공백 제거
     cleaned = cleaned.trim();
 
-    // 6. 너무 짧으면 원본 반환 (최소한의 정리만 적용)
+    // 5. 너무 짧으면 원본에서 최소 정리만 적용
     if (cleaned.length < 10) {
-      return text.replace(/```[\s\S]*?```/g, '').replace(/```/g, '').trim();
+      const fallback = text.replace(/```[\s\S]*?```/g, '').replace(/```/g, '').trim();
+      return fallback.length > 0 ? fallback : '문제를 인식할 수 없습니다.';
     }
 
     return cleaned;
@@ -518,16 +529,41 @@ JSON 응답:
           latex?: string;
         }>(parsed.steps);
 
-        const steps: SolutionStep[] = rawSteps.map((step, index) => ({
-          order: safeNumber(step?.order, index + 1),
-          title: this.stripMarkdown(safeString(step?.title, `단계 ${index + 1}`)),
-          content: this.stripMarkdown(safeString(step?.content, '')),
-          latex: step?.latex || undefined,
-        }));
+        const steps: SolutionStep[] = rawSteps.map((step, index) => {
+          // 각 필드에서 JSON 아티팩트 제거
+          let content = safeString(step?.content, '');
+          let title = safeString(step?.title, `단계 ${index + 1}`);
+
+          // JSON 아티팩트가 남아있으면 정리
+          if (hasJsonArtifacts(content)) {
+            content = ensureCleanText(content, content);
+          }
+          if (hasJsonArtifacts(title)) {
+            title = ensureCleanText(title, title);
+          }
+
+          return {
+            order: safeNumber(step?.order, index + 1),
+            title: this.stripMarkdown(title),
+            content: this.stripMarkdown(content),
+            latex: step?.latex || undefined,
+          };
+        });
+
+        // summary와 answer에서도 JSON 아티팩트 제거
+        let summary = safeString(parsed.summary, '');
+        let answer = safeString(parsed.answer, '');
+
+        if (hasJsonArtifacts(summary)) {
+          summary = ensureCleanText(summary, summary);
+        }
+        if (hasJsonArtifacts(answer)) {
+          answer = ensureCleanText(answer, answer);
+        }
 
         return {
-          summary: this.stripMarkdown(safeString(parsed.summary, '')),
-          answer: safeString(parsed.answer, ''),
+          summary: this.stripMarkdown(summary),
+          answer: answer,
           steps,
           formulas: safeArray<string>(parsed.formulas),
           relatedKEC: safeArray<string>(parsed.relatedKEC),
@@ -551,6 +587,7 @@ JSON 응답:
 
   /**
    * JSON 응답에서 텍스트만 추출 (파싱 실패 시 폴백)
+   * 개선: 콜론, 키 이름 완전 제거
    */
   private extractTextFromJSON(text: string): string {
     let result = text.trim();
@@ -578,14 +615,31 @@ JSON 응답:
       }
     }
 
-    // 2. JSON 패턴 제거
-    result = result.replace(/```[\s\S]*?```/g, '');
-    result = result.replace(/```/g, '');
-    result = result.replace(/"[a-zA-Z_]+"\s*:\s*"([^"]*)"/g, '$1');
-    result = result.replace(/"[a-zA-Z_]+"\s*:\s*\[/g, '');
-    result = result.replace(/"[a-zA-Z_]+"\s*:\s*\{/g, '');
-    result = result.replace(/[{}\[\]",]/g, ' ');
-    result = result.replace(/\s{2,}/g, ' ');
+    // 2. ensureCleanText 사용 (강화된 JSON 정리)
+    result = ensureCleanText(result, result);
+
+    // 3. 여전히 JSON 아티팩트가 있으면 추가 정리
+    if (hasJsonArtifacts(result)) {
+      // 코드 블록 제거
+      result = result.replace(/```[\s\S]*?```/g, '');
+      result = result.replace(/```/g, '');
+
+      // "key": "value" 에서 value만 추출
+      result = result.replace(/"[a-zA-Z_]+"\s*:\s*"([^"]*)"/g, '$1');
+
+      // 나머지 JSON 키-값 패턴 제거
+      result = result.replace(/"[a-zA-Z_]+"\s*:\s*/g, '');
+      result = result.replace(/"[a-zA-Z_]+"/g, '');
+
+      // 괄호, 따옴표, 쉼표 제거
+      result = result.replace(/[{}\[\]",]/g, ' ');
+
+      // 단독 콜론 제거
+      result = result.replace(/\s+:\s+/g, ' ');
+
+      // 공백 정리
+      result = result.replace(/\s{2,}/g, ' ');
+    }
 
     return this.stripMarkdown(result.trim());
   }

@@ -354,3 +354,155 @@ export function safeBoolean(value: unknown, defaultValue: boolean = false): bool
   if (value === 'false') return false;
   return defaultValue;
 }
+
+/**
+ * JSON 아티팩트 잔존 여부 검사
+ * 텍스트에 JSON 구조가 남아있는지 확인
+ */
+export function hasJsonArtifacts(text: string): boolean {
+  if (!text) return false;
+
+  // JSON 패턴 검사
+  const jsonPatterns = [
+    /"[a-zA-Z_]+"\s*:/,           // "key":
+    /^\s*\{/,                      // { 로 시작
+    /\}\s*$/,                      // } 로 끝
+    /^\s*\[/,                      // [ 로 시작
+    /\]\s*$/,                      // ] 로 끝
+    /:\s*\{/,                      // : {
+    /:\s*\[/,                      // : [
+    /,\s*"[a-zA-Z_]+"\s*:/,       // , "key":
+  ];
+
+  return jsonPatterns.some(pattern => pattern.test(text));
+}
+
+/**
+ * 모든 JSON 아티팩트를 완전히 제거
+ * cleanTextFromJSON보다 더 강력한 최종 정리 함수
+ *
+ * 수학적 중괄호 (집합 표기 등)는 보존
+ */
+export function removeAllJsonArtifacts(text: string): string {
+  if (!text || typeof text !== 'string') return '';
+
+  let result = text;
+
+  // 1. 먼저 JSON 파싱 시도하여 텍스트 필드 추출
+  const trimmed = result.trim();
+  if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (parsed) {
+        // 텍스트 필드 우선순위: extractedText > question > text > content > answer
+        const textFields = ['extractedText', 'question', 'text', 'content', 'answer'];
+        for (const field of textFields) {
+          if (typeof parsed[field] === 'string' && parsed[field].length > 10) {
+            result = parsed[field];
+            break;
+          }
+        }
+      }
+    } catch {
+      // 파싱 실패 시 계속 진행
+    }
+  }
+
+  // 2. 코드 블록 제거
+  result = result.replace(/```(?:json|javascript|typescript|js|ts)?\s*[\s\S]*?```/gi, '');
+  result = result.replace(/```/g, '');
+
+  // 3. 수학적 중괄호 보호 (임시 마커로 치환)
+  // 패턴: {숫자, 숫자, ...} 또는 {a, b, c} 형태의 집합 표기
+  const mathBraceMarker = '___MATH_BRACE___';
+  const mathBraces: string[] = [];
+  result = result.replace(/\{[\d\s,.\-+a-z]+\}/gi, (match) => {
+    // JSON 키-값이 아닌 경우만 보호
+    if (!/:/.test(match)) {
+      mathBraces.push(match);
+      return mathBraceMarker + (mathBraces.length - 1) + mathBraceMarker;
+    }
+    return match;
+  });
+
+  // 4. 균형 잡힌 JSON 객체 제거 (반복)
+  let prevLength = result.length + 1;
+  while (result.length < prevLength) {
+    prevLength = result.length;
+    const jsonMatch = extractBalancedJSON(result);
+    if (jsonMatch && jsonMatch.includes(':')) {
+      result = result.replace(jsonMatch, ' ');
+    } else {
+      break;
+    }
+  }
+
+  // 5. 불완전한 JSON 패턴 제거
+  // "key": "value" 패턴
+  result = result.replace(/"[a-zA-Z_][a-zA-Z0-9_]*"\s*:\s*"(?:[^"\\]|\\.)*"/g, '');
+  // "key": number 패턴
+  result = result.replace(/"[a-zA-Z_][a-zA-Z0-9_]*"\s*:\s*[\d.]+/g, '');
+  // "key": true/false/null 패턴
+  result = result.replace(/"[a-zA-Z_][a-zA-Z0-9_]*"\s*:\s*(true|false|null)/gi, '');
+  // "key": 만 남은 경우
+  result = result.replace(/"[a-zA-Z_][a-zA-Z0-9_]*"\s*:/g, '');
+
+  // 6. 단독 따옴표로 감싸진 키 이름 제거
+  result = result.replace(/"[a-zA-Z_][a-zA-Z0-9_]*"/g, '');
+
+  // 7. 빈 괄호 제거
+  result = result.replace(/\{\s*\}/g, '');
+  result = result.replace(/\[\s*\]/g, '');
+
+  // 8. 단독 괄호 및 쉼표 정리
+  result = result.replace(/^\s*[{}\[\],]+\s*/gm, '');
+  result = result.replace(/\s*[{}\[\],]+\s*$/gm, '');
+
+  // 9. 연속된 쉼표/콜론 정리
+  result = result.replace(/[,:\s]{3,}/g, ' ');
+
+  // 10. 수학적 중괄호 복원
+  mathBraces.forEach((brace, idx) => {
+    result = result.replace(mathBraceMarker + idx + mathBraceMarker, brace);
+  });
+
+  // 11. 이스케이프된 줄바꿈 변환
+  result = result.replace(/\\n/g, '\n');
+
+  // 12. 공백 정리
+  result = result.replace(/\n{3,}/g, '\n\n');
+  result = result.replace(/[ \t]{2,}/g, ' ');
+
+  return result.trim();
+}
+
+/**
+ * 최종 텍스트 검증 및 정리
+ * JSON 아티팩트가 남아있으면 강력 정리 수행
+ */
+export function ensureCleanText(text: string, fallbackMessage: string = '텍스트를 추출할 수 없습니다.'): string {
+  if (!text || typeof text !== 'string') return fallbackMessage;
+
+  let result = text.trim();
+
+  // 빈 텍스트 체크
+  if (result.length === 0) return fallbackMessage;
+
+  // JSON 아티팩트가 있으면 정리
+  if (hasJsonArtifacts(result)) {
+    result = removeAllJsonArtifacts(result);
+  }
+
+  // 여전히 JSON 아티팩트가 있으면 기본 cleanTextFromJSON 시도
+  if (hasJsonArtifacts(result)) {
+    result = cleanTextFromJSON(result);
+  }
+
+  // 최종 검증
+  if (result.length < 5 || hasJsonArtifacts(result)) {
+    // 마지막 시도: 모든 JSON 관련 문자 제거
+    result = result.replace(/[{}\[\]"]/g, ' ').replace(/\s+/g, ' ').trim();
+  }
+
+  return result.length > 0 ? result : fallbackMessage;
+}

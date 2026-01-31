@@ -18,11 +18,19 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Next.js-15-black?style=flat-square&logo=next.js" alt="Next.js"/>
+  <a href="https://jeonsilai.vercel.app">Live Demo</a> •
+  <a href="#주요-기능">Features</a> •
+  <a href="#기술-스택">Tech Stack</a> •
+  <a href="#시작하기">Getting Started</a>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Next.js-16-black?style=flat-square&logo=next.js" alt="Next.js"/>
   <img src="https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react" alt="React"/>
   <img src="https://img.shields.io/badge/TypeScript-5.0-3178C6?style=flat-square&logo=typescript" alt="TypeScript"/>
-  <img src="https://img.shields.io/badge/Gemini-AI-4285F4?style=flat-square&logo=google" alt="Gemini AI"/>
+  <img src="https://img.shields.io/badge/Gemini_3-AI-4285F4?style=flat-square&logo=google" alt="Gemini AI"/>
   <img src="https://img.shields.io/badge/Supabase-Database-3ECF8E?style=flat-square&logo=supabase" alt="Supabase"/>
+  <img src="https://img.shields.io/badge/Vercel-Deployed-000?style=flat-square&logo=vercel" alt="Vercel"/>
 </p>
 
 ---
@@ -41,6 +49,13 @@
 | 손글씨/회로도 문제는 검색이 어렵다 | Vision AI가 이미지를 분석하고 텍스트로 변환 |
 | 내 취약점을 모른다 | AI가 학습 패턴을 분석하고 취약 분야 진단 |
 | 단순 정답만 있고 풀이가 없다 | 단계별 풀이 + 사용 공식 + 핵심 포인트 제공 |
+| AI가 잘못된 답을 줄 수 있다 | NeMo Guardrails + RAG 검증으로 정확도 보장 |
+
+---
+
+## 라이브 데모
+
+**[https://jeonsilai.vercel.app](https://jeonsilai.vercel.app)**
 
 ---
 
@@ -63,14 +78,14 @@
 <td align="center" width="33%">
 <strong>LOAD</strong><br/>
 부하 계산<br/>
-<sub>전력량, 케이블 사이즈</sub>
+<sub>역률, 콘덴서, 전동기</sub>
 </td>
 </tr>
 <tr>
 <td align="center">
 <strong>POWER</strong><br/>
 전력 설비<br/>
-<sub>변압기, 차단기, 보호계전기</sub>
+<sub>변압기, 차단기, 단락전류</sub>
 </td>
 <td align="center">
 <strong>RENEWABLE</strong><br/>
@@ -89,23 +104,40 @@
 
 - 손글씨 문제 인식
 - 회로도/시퀀스 다이어그램 분석
-- 수식 및 표 추출
-- 자동 분야 분류
+- 수식, 표, 그래프 추출
+- 자동 분야 분류 및 에이전트 라우팅
 
-### 3. 개인화 학습 대시보드
+### 3. NeMo Guardrails 안전장치
+
+```
+입력 → Pre-filter(규칙, ~5ms) → LLM Validation(~100ms) → AI Processing → Output Validation
+       │                        │                                          │
+       ├─ 길이/패턴 검사        ├─ Topic Checker (전기기사 도메인)          ├─ RAG 검증
+       └─ 이미지 크기           └─ Jailbreak Detector (탈옥 시도)          └─ KEC 규정 검증
+```
+
+- **입력 검증**: 전기기사 도메인 관련성 검사, 탈옥 시도 탐지
+- **출력 검증**: KEC 규정 검증, 공식 적합성, 계산 정확도
+- **RAG 기반**: Supabase pgvector로 KEC 규정 및 공식 데이터베이스 검색
+
+### 4. 개인화 학습 대시보드
 
 - 총 풀이 수 / 오늘 학습량 / 연속 학습일
 - 카테고리별 진도 차트
 - AI 취약점 분석 및 학습 추천
 - 풀이 이력 관리 (정답/오답 표시)
 
-### 4. 단계별 풀이 제공
+### 5. 단계별 풀이 제공
 
 ```
 문제 분석 → 공식 선택 → 계산 과정 → 최종 답안
      ↓           ↓            ↓           ↓
   문제 해석   관련 공식    LaTeX 수식   답 + 단위
 ```
+
+- KaTeX 기반 수학 수식 렌더링
+- 관련 KEC 규정 자동 인용
+- 사용된 공식 목록 제공
 
 ---
 
@@ -114,7 +146,7 @@
 ### Frontend
 | 기술 | 버전 | 용도 |
 |------|------|------|
-| Next.js | 15.1 | App Router, SSR |
+| Next.js | 16.1 | App Router, Server Components |
 | React | 19 | UI Components |
 | TypeScript | 5.0 | Type Safety |
 | Tailwind CSS | 3.4 | Styling |
@@ -124,11 +156,18 @@
 ### Backend & AI
 | 기술 | 용도 |
 |------|------|
-| Gemini 2.5 Pro | 문제 풀이 (Solver) |
-| Gemini 2.0 Flash | 이미지 분석 (Vision) |
-| Gemini 2.0 Flash | 학습 분석 (Analytics) |
+| **Gemini 3 Pro** | 문제 풀이 (Solver) |
+| **Gemini 3 Flash** | 이미지 분석 (Vision), 검증 |
+| **Gemini 2.0 Flash** | Guardrails (Topic/Jailbreak) |
 | Supabase | PostgreSQL + Auth + Realtime |
 | pgvector | RAG 임베딩 검색 |
+
+### AI Safety & Validation
+| 기술 | 용도 |
+|------|------|
+| NeMo Guardrails | 입출력 안전장치 (Colang 규칙) |
+| RAG Validator | KEC 규정 검증 |
+| Formula Whitelist | 공식 적합성 검증 |
 
 ### Infrastructure
 | 기술 | 용도 |
@@ -142,7 +181,7 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                        Client (Next.js)                      │
+│                        Client (Next.js 16)                   │
 ├─────────────────────────────────────────────────────────────┤
 │  HeroSection  │  SolvePage  │  Dashboard  │  Auth Pages     │
 └───────┬───────┴──────┬──────┴──────┬──────┴────────┬────────┘
@@ -156,21 +195,29 @@
         │             │              │                 │
         ▼             ▼              ▼                 ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                      Service Layer                          │
+│                   Unified Guardrails                         │
+├─────────────────────────────────────────────────────────────┤
+│  Pre-filter  │  Topic Checker  │  Jailbreak Detector        │
+│  (규칙 기반)  │  (LLM 기반)      │  (LLM 기반)                │
+└───────┬──────┴───────┬──────────┴────────────┬──────────────┘
+        │              │                       │
+        ▼              ▼                       ▼
+┌─────────────────────────────────────────────────────────────┐
+│                      Service Layer                           │
 ├──────────────┬──────────────┬──────────────┬────────────────┤
-│ Vision       │ Gemini       │ Analytics    │ RAG            │
-│ Service      │ Solver       │ Service      │ Service        │
-│ (이미지분석)    │ (문제풀이)      │ (학습분석)     │ (지식검색)       │
+│ Vision       │ Agent        │ Analytics    │ RAG            │
+│ Service      │ Orchestrator │ Service      │ Validator      │
+│ (이미지분석)  │ (에이전트)    │ (학습분석)   │ (KEC 검증)     │
 └──────┬───────┴──────┬───────┴──────┬───────┴────────┬───────┘
        │              │              │                │
        ▼              ▼              ▼                ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                    External Services                        │
+│                    External Services                         │
 ├─────────────────────┬───────────────────────────────────────┤
-│   Google Gemini AI  │           Supabase                    │
-│   - gemini-3.0-pro  │   - PostgreSQL (profiles, sessions)   │
-│   - gemini-3.0-flash│   - pgvector (embeddings)             │
-│   - gemini-2.0-flash│   - Auth (OAuth, Email)               │
+│   Google Gemini AI  │           Supabase                     │
+│   - gemini-3-pro    │   - PostgreSQL (profiles, sessions)   │
+│   - gemini-3-flash  │   - pgvector (KEC, formulas)          │
+│   - gemini-2.0-flash│   - Auth (OAuth, Email)                │
 └─────────────────────┴───────────────────────────────────────┘
 ```
 
@@ -209,6 +256,9 @@ SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 
 # Google Gemini AI
 GEMINI_API_KEY=your_gemini_api_key
+
+# NeMo Guardrails (Optional)
+NEMO_GUARDRAILS_URL=your_nemo_server_url
 ```
 
 ### 실행
@@ -220,6 +270,9 @@ pnpm dev
 # 프로덕션 빌드
 pnpm build
 pnpm start
+
+# 테스트
+pnpm test
 ```
 
 ---
@@ -237,28 +290,77 @@ src/
 │
 ├── components/            # React 컴포넌트
 │   ├── home/             # 홈 컴포넌트
-│   ├── solve/            # 풀이 컴포넌트
+│   ├── solve/            # 풀이 컴포넌트 (SolutionDisplay, StepCard)
 │   ├── dashboard/        # 대시보드 컴포넌트
-│   ├── layout/           # 레이아웃 (Navbar, Footer)
 │   └── common/           # 공통 컴포넌트
-│
-├── hooks/                 # Custom React Hooks
-│   ├── useAuth.ts        # 인증 상태
-│   ├── useSolveProblem.ts # 문제 풀이
-│   ├── useStats.ts       # 통계 조회
-│   └── useAnalytics.ts   # AI 분석
 │
 ├── lib/                   # 유틸리티 & 서비스
 │   ├── services/         # AI 서비스
-│   │   ├── vision.service.ts      # Vision AI
-│   │   ├── gemini-solver.service.ts # Solver AI
+│   │   ├── vision.service.ts      # Vision AI (이미지 분석)
+│   │   ├── agent.service.ts       # Agent Orchestrator
 │   │   └── analytics.service.ts   # Analytics AI
-│   ├── ai/agents/        # 에이전트 정의
+│   ├── guardrails/       # NeMo Guardrails
+│   │   ├── unified-guardrails.ts  # 통합 안전장치
+│   │   ├── llm/                   # LLM 기반 검증
+│   │   │   ├── topic-checker.ts   # 주제 관련성 검사
+│   │   │   └── jailbreak-detector.ts  # 탈옥 시도 탐지
+│   │   └── config.ts              # 규칙 기반 검증
 │   ├── rag/              # RAG 시스템
+│   │   ├── validator/             # RAG 검증
+│   │   └── context/               # 컨텍스트 서비스
+│   ├── ai/agents/        # 에이전트 정의
 │   └── utils/            # 유틸리티 함수
+│       └── jsonParser.ts          # AI 응답 파싱
 │
-└── types/                 # TypeScript 타입 정의
+├── hooks/                 # Custom React Hooks
+│
+├── types/                 # TypeScript 타입 정의
+│
+├── guardrails/           # NeMo Colang 규칙 (Optional)
+│   ├── config.yml        # NeMo 설정
+│   ├── prompts.yml       # 프롬프트 템플릿
+│   └── rails/            # Colang 규칙
+│
+└── nemo-server/          # Python NeMo 서버 (Optional)
+    ├── main.py           # FastAPI 서버
+    └── Dockerfile        # 컨테이너화
 ```
+
+---
+
+## API 엔드포인트
+
+| Method | Endpoint | 설명 |
+|--------|----------|------|
+| POST | `/api/solve` | 문제 풀이 요청 |
+| POST | `/api/chat` | 채팅 (후속 질문) |
+| GET | `/api/stats` | 학습 통계 조회 |
+| POST | `/api/analytics` | AI 학습 분석 |
+| POST | `/api/feedback` | 풀이 피드백 |
+| GET | `/api/formulas` | 공식 목록 |
+| GET | `/api/kec` | KEC 규정 검색 |
+| POST | `/api/rag/search` | RAG 검색 |
+
+---
+
+## 성능
+
+| 지표 | 값 |
+|------|-----|
+| 문제 풀이 평균 시간 | ~15-30초 |
+| 이미지 분석 시간 | ~3-5초 |
+| Guardrails 검증 시간 | ~200-300ms |
+| KEC 검증 정확도 | 95%+ |
+
+---
+
+## 향후 계획
+
+- [ ] 오답노트 기능
+- [ ] 모의고사 모드
+- [ ] 음성 입력 지원
+- [ ] 모바일 앱 (React Native)
+- [ ] 다른 자격증 확장 (전기산업기사, 전기공사기사)
 
 ---
 

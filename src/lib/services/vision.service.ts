@@ -20,6 +20,8 @@ import {
   safeString,
   safeNumber,
   safeArray,
+  removeAllJsonArtifacts,
+  ensureCleanText,
 } from '@/lib/utils/jsonParser';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
@@ -306,15 +308,10 @@ export class VisionService {
   /**
    * 최종 검증 - 순수 텍스트 보장
    * 어떤 JSON 형식이나 코드블록도 남아있지 않도록 함
-   * 통합 JSON 파서의 cleanTextFromJSON 사용
+   * 강화된 ensureCleanText 사용
    */
   private ensurePureText(text: string): string {
-    if (!text) return '문제 텍스트를 추출할 수 없습니다.';
-
-    // 통합 유틸리티 사용 (재귀 깊이 제한 포함)
-    const cleaned = cleanTextFromJSON(text);
-
-    return cleaned || '문제 텍스트를 추출할 수 없습니다.';
+    return ensureCleanText(text, '문제 텍스트를 추출할 수 없습니다.');
   }
 
   /**
@@ -419,10 +416,15 @@ export class VisionService {
 
   /**
    * 원본 응답에서 텍스트만 추출 (파싱 실패 시 폴백)
+   * 개선: greedy 패턴 제거, 재귀 깊이 제한 추가
    */
-  private extractTextFromRawResponse(responseText: string): string {
-    // 1. extractedText 필드 값만 추출 시도 (여러 패턴 시도)
-    // 패턴 1: 간단한 문자열 값
+  private extractTextFromRawResponse(responseText: string, depth: number = 0): string {
+    // 재귀 깊이 제한
+    if (depth > 5) {
+      return this.extractCoreText(responseText);
+    }
+
+    // 1. extractedText 필드 값만 추출 시도
     const simpleMatch = responseText.match(/"extractedText"\s*:\s*"((?:[^"\\]|\\.)*)"/);
     if (simpleMatch) {
       const extracted = simpleMatch[1]
@@ -430,39 +432,36 @@ export class VisionService {
         .replace(/\\"/g, '"')
         .replace(/\\\\/g, '\\');
 
-      // 추출된 값이 또 JSON이면 재귀 처리
+      // 추출된 값이 또 JSON이면 재귀 처리 (깊이 제한 적용)
       if (extracted.trim().startsWith('{')) {
-        return this.extractTextFromRawResponse(extracted);
+        return this.extractTextFromRawResponse(extracted, depth + 1);
       }
 
       return extracted;
     }
 
-    // 패턴 2: 여러 줄 문자열 (템플릿 리터럴 스타일)
+    // 2. 여러 줄 문자열 (템플릿 리터럴 스타일)
     const multilineMatch = responseText.match(/"extractedText"\s*:\s*`([^`]*)`/);
     if (multilineMatch) {
       return multilineMatch[1].replace(/\\n/g, '\n');
     }
 
-    // 2. 코드 블록 안에 순수 텍스트가 있는지 확인
-    // (JSON이 아닌 일반 텍스트 블록)
+    // 3. 코드 블록 안에 순수 텍스트가 있는지 확인
     const textBlockMatch = responseText.match(/```\s*\n([\s\S]*?)\n```/);
     if (textBlockMatch && !textBlockMatch[1].trim().startsWith('{')) {
       return textBlockMatch[1].trim();
     }
 
-    // 3. JSON 블록 및 코드 블록 제거
-    let cleaned = responseText;
-    cleaned = cleaned.replace(/```(?:json)?\s*[\s\S]*?```/g, '');
-    cleaned = cleaned.replace(/\{[\s\S]*\}/g, '');
-    cleaned = cleaned.trim();
+    // 4. 균형 잡힌 JSON 추출 후 제거 (greedy 패턴 대신)
+    // 수학적 중괄호 보호를 위해 removeAllJsonArtifacts 사용
+    const cleaned = removeAllJsonArtifacts(responseText);
 
-    // 4. 정리된 텍스트가 있으면 반환
+    // 5. 정리된 텍스트가 있으면 반환
     if (cleaned.length > 10) {
       return cleaned;
     }
 
-    // 5. 원본 텍스트에서 핵심 내용만 추출
+    // 6. 원본 텍스트에서 핵심 내용만 추출
     return this.extractCoreText(responseText);
   }
 
