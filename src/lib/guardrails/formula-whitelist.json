@@ -1,0 +1,239 @@
+{
+  "categories": {
+    "조명설계": {
+      "formulas": [
+        {
+          "name": "광속법 (등수 계산)",
+          "formula": "N = (E × A × M) / (F × U)",
+          "latex": "N = \\frac{E \\times A \\times M}{F \\times U}",
+          "variables": {
+            "N": { "name": "등수", "unit": "개" },
+            "E": { "name": "소요조도", "unit": "lx" },
+            "A": { "name": "바닥면적", "unit": "m²" },
+            "M": { "name": "감광보상률", "unit": "-", "typical": "1.2~1.5" },
+            "F": { "name": "광속", "unit": "lm" },
+            "U": { "name": "조명률", "unit": "-", "typical": "0.4~0.7" }
+          },
+          "notes": "결과는 올림 처리"
+        },
+        {
+          "name": "점광원법 (조도)",
+          "formula": "E = I × cos³θ / h²",
+          "latex": "E = \\frac{I \\times \\cos^3\\theta}{h^2}",
+          "variables": {
+            "E": { "name": "조도", "unit": "lx" },
+            "I": { "name": "광도", "unit": "cd" },
+            "θ": { "name": "입사각", "unit": "°" },
+            "h": { "name": "광원 높이", "unit": "m" }
+          }
+        }
+      ]
+    },
+    "역률개선": {
+      "formulas": [
+        {
+          "name": "콘덴서 용량",
+          "formula": "Qc = P × (tanθ₁ - tanθ₂)",
+          "latex": "Q_c = P \\times (\\tan\\theta_1 - \\tan\\theta_2)",
+          "variables": {
+            "Qc": { "name": "콘덴서 용량", "unit": "kVar" },
+            "P": { "name": "유효전력", "unit": "kW" },
+            "θ₁": { "name": "개선 전 역률각", "unit": "°" },
+            "θ₂": { "name": "개선 후 역률각", "unit": "°" }
+          }
+        },
+        {
+          "name": "역률 계산",
+          "formula": "cosθ = P / S",
+          "latex": "\\cos\\theta = \\frac{P}{S}",
+          "variables": {
+            "cosθ": { "name": "역률", "unit": "-" },
+            "P": { "name": "유효전력", "unit": "kW" },
+            "S": { "name": "피상전력", "unit": "kVA" }
+          }
+        }
+      ]
+    },
+    "변압기": {
+      "formulas": [
+        {
+          "name": "변압기 용량",
+          "formula": "P_TR = P_설비 / (cosθ × η)",
+          "latex": "P_{TR} = \\frac{P_{설비}}{\\cos\\theta \\times \\eta}",
+          "variables": {
+            "P_TR": { "name": "변압기 용량", "unit": "kVA" },
+            "P_설비": { "name": "설비용량", "unit": "kW" },
+            "cosθ": { "name": "역률", "unit": "-" },
+            "η": { "name": "효율", "unit": "-" }
+          }
+        },
+        {
+          "name": "정격전류 (3상)",
+          "formula": "I = P / (√3 × V × cosθ)",
+          "latex": "I = \\frac{P}{\\sqrt{3} \\times V \\times \\cos\\theta}",
+          "variables": {
+            "I": { "name": "정격전류", "unit": "A" },
+            "P": { "name": "전력", "unit": "W" },
+            "V": { "name": "선간전압", "unit": "V" },
+            "cosθ": { "name": "역률", "unit": "-" }
+          }
+        }
+      ]
+    },
+    "단락전류": {
+      "formulas": [
+        {
+          "name": "%Z법 단락전류",
+          "formula": "Is = (100 × P) / (√3 × V × %Z)",
+          "latex": "I_s = \\frac{100 \\times P}{\\sqrt{3} \\times V \\times \\%Z}",
+          "variables": {
+            "Is": { "name": "단락전류", "unit": "A" },
+            "P": { "name": "기준용량", "unit": "VA" },
+            "V": { "name": "정격전압", "unit": "V" },
+            "%Z": { "name": "% 임피던스", "unit": "%" }
+          }
+        },
+        {
+          "name": "대칭분 단락전류",
+          "formula": "I_3φ = V / (√3 × Z)",
+          "latex": "I_{3\\phi} = \\frac{V}{\\sqrt{3} \\times Z}",
+          "variables": {
+            "I_3φ": { "name": "3상 단락전류", "unit": "A" },
+            "V": { "name": "선간전압", "unit": "V" },
+            "Z": { "name": "임피던스", "unit": "Ω" }
+          }
+        }
+      ]
+    },
+    "전압강하": {
+      "formulas": [
+        {
+          "name": "전압강하 (단상2선)",
+          "formula": "e = (35.6 × L × I) / A",
+          "latex": "e = \\frac{35.6 \\times L \\times I}{A}",
+          "variables": {
+            "e": { "name": "전압강하", "unit": "V" },
+            "L": { "name": "전선길이", "unit": "m" },
+            "I": { "name": "전류", "unit": "A" },
+            "A": { "name": "전선단면적", "unit": "mm²" }
+          }
+        },
+        {
+          "name": "전압강하 (3상3선)",
+          "formula": "e = (30.8 × L × I) / A",
+          "latex": "e = \\frac{30.8 \\times L \\times I}{A}",
+          "variables": {
+            "e": { "name": "전압강하", "unit": "V" },
+            "L": { "name": "전선길이", "unit": "m" },
+            "I": { "name": "전류", "unit": "A" },
+            "A": { "name": "전선단면적", "unit": "mm²" }
+          }
+        },
+        {
+          "name": "전압강하율",
+          "formula": "e% = (e / V) × 100",
+          "latex": "e\\% = \\frac{e}{V} \\times 100",
+          "variables": {
+            "e%": { "name": "전압강하율", "unit": "%" },
+            "e": { "name": "전압강하", "unit": "V" },
+            "V": { "name": "공급전압", "unit": "V" }
+          }
+        }
+      ]
+    },
+    "접지": {
+      "formulas": [
+        {
+          "name": "봉상 접지극 저항",
+          "formula": "R = ρ / (2πL) × ln(4L/d)",
+          "latex": "R = \\frac{\\rho}{2\\pi L} \\times \\ln\\frac{4L}{d}",
+          "variables": {
+            "R": { "name": "접지저항", "unit": "Ω" },
+            "ρ": { "name": "대지저항률", "unit": "Ω·m" },
+            "L": { "name": "봉 길이", "unit": "m" },
+            "d": { "name": "봉 직경", "unit": "m" }
+          }
+        },
+        {
+          "name": "판상 접지극 저항",
+          "formula": "R = ρ / (4r)",
+          "latex": "R = \\frac{\\rho}{4r}",
+          "variables": {
+            "R": { "name": "접지저항", "unit": "Ω" },
+            "ρ": { "name": "대지저항률", "unit": "Ω·m" },
+            "r": { "name": "등가반경", "unit": "m" }
+          }
+        }
+      ]
+    },
+    "축전지": {
+      "formulas": [
+        {
+          "name": "축전지 용량",
+          "formula": "C = K × L / η",
+          "latex": "C = \\frac{K \\times L}{\\eta}",
+          "variables": {
+            "C": { "name": "축전지 용량", "unit": "Ah" },
+            "K": { "name": "보수율", "unit": "-" },
+            "L": { "name": "부하", "unit": "Ah" },
+            "η": { "name": "방전효율", "unit": "-" }
+          }
+        }
+      ]
+    },
+    "태양광": {
+      "formulas": [
+        {
+          "name": "발전량",
+          "formula": "E = P × H × η × K",
+          "latex": "E = P \\times H \\times \\eta \\times K",
+          "variables": {
+            "E": { "name": "발전량", "unit": "kWh" },
+            "P": { "name": "설비용량", "unit": "kW" },
+            "H": { "name": "일사시간", "unit": "h" },
+            "η": { "name": "시스템효율", "unit": "-" },
+            "K": { "name": "온도보정계수", "unit": "-" }
+          }
+        }
+      ]
+    },
+    "전력손실": {
+      "formulas": [
+        {
+          "name": "3상 전력손실",
+          "formula": "Pl = 3I²R",
+          "latex": "P_l = 3I^2R",
+          "variables": {
+            "Pl": { "name": "전력손실", "unit": "W" },
+            "I": { "name": "선전류", "unit": "A" },
+            "R": { "name": "선로저항", "unit": "Ω" }
+          }
+        },
+        {
+          "name": "전력손실 (전력 기준)",
+          "formula": "Pl = P²R / (V²cos²θ)",
+          "latex": "P_l = \\frac{P^2 R}{V^2 \\cos^2\\theta}",
+          "variables": {
+            "Pl": { "name": "전력손실", "unit": "W" },
+            "P": { "name": "전력", "unit": "W" },
+            "R": { "name": "저항", "unit": "Ω" },
+            "V": { "name": "전압", "unit": "V" },
+            "cosθ": { "name": "역률", "unit": "-" }
+          }
+        }
+      ]
+    }
+  },
+  "constants": {
+    "전선_저항률": {
+      "copper": { "value": 0.0172, "unit": "Ω·mm²/m" },
+      "aluminum": { "value": 0.0282, "unit": "Ω·mm²/m" }
+    },
+    "전선상수_K": {
+      "단상2선": 35.6,
+      "단상3선": 17.8,
+      "3상3선": 30.8,
+      "3상4선": 17.8
+    }
+  }
+}

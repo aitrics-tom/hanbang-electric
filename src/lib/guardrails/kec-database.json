@@ -1,0 +1,128 @@
+{
+  "regulations": {
+    "KEC_141": {
+      "title": "접지시스템",
+      "description": "접지시스템의 종류와 적용",
+      "systems": ["TT", "TN-S", "TN-C", "TN-C-S", "IT"],
+      "requirements": {
+        "TT": "변압기 중성점 접지, 기기 외함 독립 접지",
+        "TN-S": "중성선(N)과 보호도체(PE) 분리",
+        "TN-C": "중성선과 보호도체 겸용(PEN)",
+        "TN-C-S": "TN-C와 TN-S 혼합",
+        "IT": "비접지 또는 고저항 접지"
+      }
+    },
+    "KEC_142": {
+      "title": "접지저항",
+      "description": "계통별 접지저항 기준",
+      "values": {
+        "특고압_고압": {
+          "resistance": "10Ω 이하",
+          "condition": "고장전류 1초 이내 차단"
+        },
+        "저압_TT": {
+          "resistance": "100Ω 이하",
+          "formula": "Ra × Ia ≤ 50V"
+        },
+        "저압_TN": {
+          "resistance": "접촉전압 50V 이하",
+          "formula": "Zs × Ia ≤ U0"
+        }
+      }
+    },
+    "KEC_143": {
+      "title": "보호도체",
+      "description": "보호도체(PE) 규격",
+      "sizing": {
+        "method": "상도체 단면적 기준",
+        "table": {
+          "S_16mm2_이하": "상도체와 동일",
+          "S_16_35mm2": "16mm²",
+          "S_35mm2_초과": "S/2 (최소 16mm²)"
+        }
+      }
+    },
+    "KEC_210": {
+      "title": "감전보호",
+      "description": "직접접촉 및 간접접촉 보호",
+      "direct_protection": ["절연", "격벽", "IPXXB 이상", "차단장치"],
+      "indirect_protection": {
+        "자동차단": {
+          "TT": "0.2초 (32A 이하) / 1초 (32A 초과)",
+          "TN": "0.4초 (120V) / 0.2초 (230V) / 0.1초 (400V)"
+        },
+        "누전차단기": {
+          "감도전류": "30mA 이하 (인체보호)",
+          "동작시간": "0.03초 이내"
+        }
+      }
+    },
+    "KEC_232": {
+      "title": "과전류보호",
+      "description": "과부하 및 단락 보호",
+      "overload": {
+        "condition": "Ib ≤ In ≤ Iz",
+        "variables": {
+          "Ib": "설계전류",
+          "In": "차단기 정격전류",
+          "Iz": "전선 허용전류"
+        }
+      },
+      "short_circuit": {
+        "condition": "I²t ≤ k²S²",
+        "breaking_capacity": "차단기 차단용량 ≥ 예상 단락전류"
+      }
+    },
+    "KEC_234": {
+      "title": "전선 허용전류",
+      "description": "배선방식별 허용전류 보정",
+      "factors": {
+        "온도보정계수": "주위온도에 따른 보정",
+        "밀집보정계수": "다수 전선 밀집시 보정",
+        "매설보정계수": "지중매설시 보정"
+      }
+    },
+    "KEC_241": {
+      "title": "전압강하",
+      "description": "허용 전압강하 기준",
+      "limits": {
+        "간선": "3% 이하",
+        "분기회로": "2% 이하",
+        "합계": "5% 이하 (60m 초과시 1% 추가 허용)"
+      },
+      "formula": "e = K × L × I / A"
+    }
+  },
+  "formulas": {
+    "voltage_drop": {
+      "name": "전압강하",
+      "formula": "e = K × L × I / A",
+      "variables": {
+        "e": "전압강하 [V]",
+        "K": "전선상수 (단상2선: 35.6, 3상3선: 30.8)",
+        "L": "전선 길이 [m]",
+        "I": "전류 [A]",
+        "A": "전선 단면적 [mm²]"
+      }
+    },
+    "ground_resistance": {
+      "name": "접지저항",
+      "formula": "R = ρ / (2πr)",
+      "variables": {
+        "R": "접지저항 [Ω]",
+        "ρ": "대지 고유저항 [Ω·m]",
+        "r": "접지봉 반경 [m]"
+      }
+    },
+    "protection_pe": {
+      "name": "보호도체 단면적",
+      "formula": "S_pe = √(I²t) / k",
+      "variables": {
+        "S_pe": "보호도체 단면적 [mm²]",
+        "I": "고장전류 [A]",
+        "t": "차단시간 [s]",
+        "k": "도체 재질 계수"
+      }
+    }
+  }
+}
