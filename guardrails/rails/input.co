@@ -1,0 +1,236 @@
+# Input Rails - 입력 검증 규칙
+# 전기기사 AI 풀이 서비스 입력 검증 Colang 규칙
+
+# =============================================================================
+# 1. Topical Rails - 전기기사 관련 주제 검증
+# =============================================================================
+
+# 전기기사 관련 질문 패턴 정의
+define user ask electrical question
+  "전기기사"
+  "전기공사"
+  "전기설비"
+  "조명 계산"
+  "역률 개선"
+  "변압기 용량"
+  "접지 저항"
+  "전압 강하"
+  "단락 전류"
+  "과전류 보호"
+  "누전 차단기"
+  "KEC 규정"
+  "시퀀스 회로"
+  "PLC 프로그램"
+  "수변전 설비"
+  "배선 설계"
+  "전력 계통"
+  "광속법"
+  "축전지"
+  "태양광 발전"
+
+# 전기 공식 관련 질문
+define user ask formula question
+  "공식"
+  "계산"
+  "어떻게 구하"
+  "풀이"
+  "식"
+  "N = EAM/FU"
+  "e = KLI/A"
+  "cosθ"
+  "tanθ"
+  "√3"
+
+# 관련 없는 질문 패턴
+define user ask unrelated question
+  "날씨"
+  "음식 추천"
+  "영화 추천"
+  "게임"
+  "연예인"
+  "주식"
+  "부동산"
+  "여행"
+
+# =============================================================================
+# 2. Blocked Content Rails - 차단 패턴 검증
+# =============================================================================
+
+# 부적절한 내용 패턴
+define user ask inappropriate content
+  "욕설"
+  "비속어"
+  "공격적인 표현"
+
+# 개인정보 요청 패턴
+define user ask personal information
+  "개인정보"
+  "주민등록번호"
+  "전화번호 알려줘"
+  "주소 알려줘"
+
+# 불법 행위 관련 패턴
+define user ask illegal content
+  "해킹 방법"
+  "크래킹"
+  "불법 다운로드"
+  "답지 유출"
+  "시험 부정행위"
+  "컨닝"
+
+# 위험한 전기 작업 요청
+define user ask dangerous electrical work
+  "감전 시키는 방법"
+  "불법 전기 공사"
+  "무자격 공사"
+  "안전장치 해제"
+
+# =============================================================================
+# 3. Input Validation Rails - 입력 형식 검증
+# =============================================================================
+
+# 너무 짧은 입력
+define user send short input
+  user said something short
+
+# 너무 긴 입력
+define user send long input
+  user said something very long exceeding 2000 characters
+
+# =============================================================================
+# 4. Flow Definitions - 대화 흐름 정의
+# =============================================================================
+
+# 전기기사 관련 질문 처리 흐름
+define flow handle electrical question
+  user ask electrical question
+  bot provide electrical answer
+
+# 공식 관련 질문 처리 흐름
+define flow handle formula question
+  user ask formula question
+  bot explain formula with steps
+
+# 관련 없는 질문 거부 흐름
+define flow handle unrelated question
+  user ask unrelated question
+  bot inform topic limitation
+  bot suggest electrical topic
+
+# 부적절한 내용 차단 흐름
+define flow handle inappropriate content
+  user ask inappropriate content
+  bot refuse inappropriate request
+
+# 개인정보 요청 차단 흐름
+define flow handle personal information request
+  user ask personal information
+  bot refuse personal information request
+
+# 불법 내용 차단 흐름
+define flow handle illegal content
+  user ask illegal content
+  bot refuse illegal request
+
+# 위험한 작업 요청 차단 흐름
+define flow handle dangerous request
+  user ask dangerous electrical work
+  bot refuse dangerous request
+  bot emphasize safety
+
+# 짧은 입력 처리 흐름
+define flow handle short input
+  user send short input
+  bot request more detail
+
+# 긴 입력 처리 흐름
+define flow handle long input
+  user send long input
+  bot request shorter input
+
+# =============================================================================
+# 5. Bot Response Definitions - 봇 응답 정의
+# =============================================================================
+
+# 전기기사 답변 제공
+define bot provide electrical answer
+  "전기기사 문제에 대한 답변을 제공합니다."
+
+# 공식 설명 제공
+define bot explain formula with steps
+  "공식과 단계별 풀이를 설명합니다."
+
+# 주제 제한 안내
+define bot inform topic limitation
+  "죄송합니다. 저는 전기기사 자격증 시험 관련 질문만 답변할 수 있습니다."
+
+# 전기 주제 제안
+define bot suggest electrical topic
+  """전기기사 관련 질문 예시:
+  - 광속법으로 등수 계산하는 방법
+  - 역률 개선을 위한 콘덴서 용량 계산
+  - KEC 접지 규정 설명
+  - 전압강하 계산 공식
+  무엇이든 물어보세요!"""
+
+# 부적절한 요청 거부
+define bot refuse inappropriate request
+  "부적절한 내용이 포함되어 있어 답변드리기 어렵습니다. 전기기사 관련 질문을 해주세요."
+
+# 개인정보 요청 거부
+define bot refuse personal information request
+  "개인정보 관련 요청은 처리할 수 없습니다. 전기기사 시험 관련 질문을 해주세요."
+
+# 불법 요청 거부
+define bot refuse illegal request
+  "불법적인 내용에 대해서는 답변드릴 수 없습니다. 정당한 학습 목적의 질문을 해주세요."
+
+# 위험한 요청 거부
+define bot refuse dangerous request
+  "안전하지 않은 전기 작업에 대해서는 안내드릴 수 없습니다."
+
+# 안전 강조
+define bot emphasize safety
+  """⚠️ 전기 안전 주의사항:
+  - 전기 작업은 반드시 유자격자가 수행해야 합니다
+  - KEC 규정을 준수하여 안전하게 작업하세요
+  - 의심스러운 경우 전문가에게 문의하세요"""
+
+# 상세 정보 요청
+define bot request more detail
+  "질문이 너무 짧습니다. 좀 더 구체적으로 입력해주세요. 예: '광속법으로 사무실 조명 등수 계산하는 방법'"
+
+# 짧은 입력 요청
+define bot request shorter input
+  "질문이 너무 깁니다. 핵심 내용만 2000자 이하로 입력해주세요."
+
+# =============================================================================
+# 6. Subflow Definitions - 보조 흐름 정의
+# =============================================================================
+
+# 입력 검증 서브플로우
+define subflow validate user input
+  if user input contains blocked pattern
+    bot refuse inappropriate request
+    stop
+
+  if user input is too short
+    bot request more detail
+    stop
+
+  if user input is too long
+    bot request shorter input
+    stop
+
+  if user input is off topic
+    bot inform topic limitation
+    bot suggest electrical topic
+    stop
+
+# 주제 관련성 확인 서브플로우
+define subflow check topic relevance
+  $is_electrical = check if input relates to electrical topics
+  if not $is_electrical
+    bot inform topic limitation
+    bot suggest electrical topic
+    stop

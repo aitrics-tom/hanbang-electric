@@ -1,0 +1,43 @@
+# Render.com deployment configuration
+# https://render.com/docs/blueprint-spec
+
+services:
+  - type: web
+    name: jeonsilai-nemo-guardrails
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    region: singapore  # Closest to Korea
+    plan: starter  # Can be upgraded to starter-plus, standard, etc.
+
+    # Environment variables
+    envVars:
+      - key: HOST
+        value: 0.0.0.0
+      - key: PORT
+        value: 8000
+      - key: ENV
+        value: production
+      - key: ALLOWED_ORIGINS
+        value: "*"  # Configure for your frontend domains
+      # Add OpenAI API key if using NeMo Guardrails with LLM
+      # - key: OPENAI_API_KEY
+      #   sync: false  # Set manually in Render dashboard
+
+    # Health check configuration
+    healthCheckPath: /health
+
+    # Auto deploy on push to main branch
+    autoDeploy: true
+
+    # Build filter - only rebuild when files in nemo-server change
+    buildFilter:
+      paths:
+        - nemo-server/**
+
+    # Scaling configuration (for paid plans)
+    # scaling:
+    #   minInstances: 1
+    #   maxInstances: 3
+    #   targetMemoryPercent: 80
+    #   targetCPUPercent: 80

@@ -1,0 +1,306 @@
+# Output Rails - 출력 검증 규칙
+# 전기기사 AI 풀이 서비스 출력 검증 Colang 규칙
+
+# =============================================================================
+# 1. KEC Regulation Validation - KEC 규정 검증
+# =============================================================================
+
+# KEC 규정 코드 패턴 정의
+define bot response with kec reference
+  bot said something containing "KEC"
+  bot said something containing "한국전기설비규정"
+
+# 주요 KEC 규정 코드
+define kec regulation codes
+  "KEC 141"  # 접지시스템
+  "KEC 142"  # 접지저항
+  "KEC 143"  # 보호도체
+  "KEC 210"  # 감전보호
+  "KEC 232"  # 과전류보호
+  "KEC 234"  # 전선 허용전류
+  "KEC 241"  # 전압강하
+
+# KEC 규정 검증 필요 주제
+define topics requiring kec validation
+  "접지"
+  "접지저항"
+  "접지시스템"
+  "보호도체"
+  "감전보호"
+  "과전류"
+  "누전차단기"
+  "전압강하"
+  "허용전류"
+
+# =============================================================================
+# 2. Formula Validation - 공식 검증
+# =============================================================================
+
+# 조명 설계 공식
+define lighting formulas
+  "N = (E × A × M) / (F × U)"
+  "N = EAM/FU"
+  "E = I × cos³θ / h²"
+
+# 역률 개선 공식
+define power factor formulas
+  "Qc = P × (tanθ₁ - tanθ₂)"
+  "cosθ = P / S"
+  "tanθ = Q / P"
+
+# 변압기 공식
+define transformer formulas
+  "P_TR = P_설비 / (cosθ × η)"
+  "I = P / (√3 × V × cosθ)"
+
+# 단락전류 공식
+define short circuit formulas
+  "Is = (100 × P) / (√3 × V × %Z)"
+  "I_3φ = V / (√3 × Z)"
+
+# 전압강하 공식
+define voltage drop formulas
+  "e = (K × L × I) / A"
+  "e = (35.6 × L × I) / A"
+  "e = (30.8 × L × I) / A"
+  "e% = (e / V) × 100"
+
+# 접지 공식
+define grounding formulas
+  "R = ρ / (2πL) × ln(4L/d)"
+  "R = ρ / (4r)"
+  "R = ρ / (2πr)"
+
+# 전력손실 공식
+define power loss formulas
+  "Pl = 3I²R"
+  "Pl = P²R / (V²cos²θ)"
+
+# 허용된 공식 목록
+define allowed formulas
+  lighting formulas
+  power factor formulas
+  transformer formulas
+  short circuit formulas
+  voltage drop formulas
+  grounding formulas
+  power loss formulas
+
+# =============================================================================
+# 3. Calculation Validation - 계산 검증
+# =============================================================================
+
+# 계산 결과 포함 응답
+define bot response with calculation
+  bot said something containing numbers and units
+  bot said something containing "=" and numbers
+
+# 계산 단계 포함 응답
+define bot response with calculation steps
+  bot said something containing "풀이"
+  bot said something containing "계산"
+  bot said something containing "대입"
+  bot said something containing "결과"
+
+# =============================================================================
+# 4. Unit Validation - 단위 검증
+# =============================================================================
+
+# SI 단위 목록
+define valid si units
+  "V"      # 볼트
+  "A"      # 암페어
+  "W"      # 와트
+  "kW"     # 킬로와트
+  "Ω"      # 옴
+  "F"      # 패럿
+  "H"      # 헨리
+  "lx"     # 럭스
+  "lm"     # 루멘
+  "cd"     # 칸델라
+  "m"      # 미터
+  "mm²"    # 제곱밀리미터
+  "kVA"    # 킬로볼트암페어
+  "kVar"   # 킬로바르
+  "kWh"    # 킬로와트시
+  "mA"     # 밀리암페어
+  "°"      # 도 (각도)
+
+# 단위가 포함된 응답
+define bot response with units
+  bot said something containing valid si units
+
+# =============================================================================
+# 5. Safety Check - 안전 검증
+# =============================================================================
+
+# 안전 경고가 필요한 주제
+define safety critical topics
+  "감전"
+  "고전압"
+  "접지"
+  "누전"
+  "단락"
+  "아크"
+  "폭발"
+  "화재"
+
+# 안전 경고 포함 응답
+define bot response with safety warning
+  bot said something containing "주의"
+  bot said something containing "위험"
+  bot said something containing "안전"
+  bot said something containing "⚠️"
+
+# =============================================================================
+# 6. Output Quality Gates - 출력 품질 검증 흐름
+# =============================================================================
+
+# KEC 검증 흐름
+define flow validate kec reference
+  if response topic in topics requiring kec validation
+    if not bot response with kec reference
+      bot add kec reference warning
+
+# 공식 검증 흐름
+define flow validate formula usage
+  if response contains formula
+    $formula = extract formula from response
+    if not $formula in allowed formulas
+      bot flag unknown formula
+    else
+      bot confirm formula validity
+
+# 계산 검증 흐름
+define flow validate calculation
+  if bot response with calculation
+    $inputs = extract calculation inputs
+    $result = extract calculation result
+    $expected = compute expected result from inputs
+    $tolerance = 0.01  # 1% tolerance
+    if abs($result - $expected) > $tolerance * $expected
+      bot flag calculation error
+      bot show correct calculation
+
+# 단위 검증 흐름
+define flow validate units
+  if bot response with calculation
+    if not bot response with units
+      bot add unit warning
+
+# 안전 검증 흐름
+define flow validate safety
+  if response topic in safety critical topics
+    if not bot response with safety warning
+      bot add safety reminder
+
+# =============================================================================
+# 7. Bot Response Additions - 봇 응답 추가 정의
+# =============================================================================
+
+# KEC 참조 경고 추가
+define bot add kec reference warning
+  "※ 참고: 해당 내용은 KEC(한국전기설비규정)를 확인하시기 바랍니다."
+
+# 알 수 없는 공식 플래그
+define bot flag unknown formula
+  "⚠️ 주의: 사용된 공식의 정확성을 확인해주세요."
+
+# 공식 유효성 확인
+define bot confirm formula validity
+  "✓ 사용된 공식이 검증되었습니다."
+
+# 계산 오류 플래그
+define bot flag calculation error
+  "⚠️ 계산 결과가 예상 값과 다릅니다. 다시 확인해주세요."
+
+# 올바른 계산 표시
+define bot show correct calculation
+  "정확한 계산 결과는 다음과 같습니다: ..."
+
+# 단위 경고 추가
+define bot add unit warning
+  "※ 답에 적절한 단위를 포함했는지 확인해주세요."
+
+# 안전 알림 추가
+define bot add safety reminder
+  """⚠️ 안전 주의사항:
+  - 전기 작업 시 반드시 전원을 차단하세요
+  - 적절한 보호장구를 착용하세요
+  - 유자격자만 작업해야 합니다"""
+
+# =============================================================================
+# 8. Response Structure Validation - 응답 구조 검증
+# =============================================================================
+
+# 필수 응답 구조
+define required response structure
+  "answer"    # 최종 답안
+  "steps"     # 풀이 단계
+  "formulas"  # 사용된 공식
+
+# 응답 구조 검증 흐름
+define flow validate response structure
+  if response is solving problem
+    if not response contains answer
+      bot add answer field
+    if not response contains steps
+      bot add steps field
+    if not response contains formulas
+      bot add formulas field
+
+# 답안 필드 추가
+define bot add answer field
+  "【정답】"
+
+# 풀이 단계 추가
+define bot add steps field
+  "【풀이】"
+
+# 공식 필드 추가
+define bot add formulas field
+  "【관련 공식】"
+
+# =============================================================================
+# 9. Confidence Threshold - 신뢰도 검증
+# =============================================================================
+
+# 낮은 신뢰도 응답 처리
+define flow handle low confidence response
+  if response confidence < 0.7
+    bot add uncertainty notice
+    bot suggest verification
+
+# 불확실성 공지
+define bot add uncertainty notice
+  "※ 이 답변의 정확성을 완전히 보장하기 어렵습니다."
+
+# 검증 제안
+define bot suggest verification
+  "KEC 규정이나 교재를 통해 다시 한번 확인해보시기 바랍니다."
+
+# =============================================================================
+# 10. Master Output Validation Flow - 마스터 출력 검증 흐름
+# =============================================================================
+
+define flow master output validation
+  # 1. KEC 규정 검증
+  execute validate kec reference
+
+  # 2. 공식 검증
+  execute validate formula usage
+
+  # 3. 계산 검증
+  execute validate calculation
+
+  # 4. 단위 검증
+  execute validate units
+
+  # 5. 안전 검증
+  execute validate safety
+
+  # 6. 응답 구조 검증
+  execute validate response structure
+
+  # 7. 신뢰도 검증
+  execute handle low confidence response
