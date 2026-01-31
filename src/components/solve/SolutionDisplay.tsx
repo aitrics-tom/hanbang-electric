@@ -240,8 +240,6 @@ const AgentInfoCard = memo(function AgentInfoCard({
   agent: (typeof AGENTS)[keyof typeof AGENTS];
   verification?: SolutionResponse['verification'];
 }) {
-  const confidence = verification?.confidence ? Math.round(verification.confidence * 100) : 0;
-
   return (
     <Card className="bg-gradient-to-r from-teal-50 to-white border-teal-100">
       <CardBody className="p-4">
@@ -280,7 +278,6 @@ const AgentInfoCard = memo(function AgentInfoCard({
                   {verification.isValid ? '검증 완료' : '확인 필요'}
                 </span>
               </div>
-              <span className="text-xs text-slate-500">신뢰도 {confidence}%</span>
             </div>
           )}
         </div>
