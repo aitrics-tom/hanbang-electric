@@ -156,21 +156,21 @@
         │             │              │                 │
         ▼             ▼              ▼                 ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                      Service Layer                           │
+│                      Service Layer                          │
 ├──────────────┬──────────────┬──────────────┬────────────────┤
 │ Vision       │ Gemini       │ Analytics    │ RAG            │
 │ Service      │ Solver       │ Service      │ Service        │
-│ (이미지분석)  │ (문제풀이)    │ (학습분석)   │ (지식검색)      │
+│ (이미지분석)    │ (문제풀이)      │ (학습분석)     │ (지식검색)       │
 └──────┬───────┴──────┬───────┴──────┬───────┴────────┬───────┘
        │              │              │                │
        ▼              ▼              ▼                ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                    External Services                         │
+│                    External Services                        │
 ├─────────────────────┬───────────────────────────────────────┤
-│   Google Gemini AI  │           Supabase                     │
-│   - gemini-2.5-pro  │   - PostgreSQL (profiles, sessions)   │
-│   - gemini-2.0-flash│   - pgvector (embeddings)             │
-│                     │   - Auth (OAuth, Email)                │
+│   Google Gemini AI  │           Supabase                    │
+│   - gemini-3.0-pro  │   - PostgreSQL (profiles, sessions)   │
+│   - gemini-3.0-flash│   - pgvector (embeddings)             │
+│   - gemini-2.0-flash│   - Auth (OAuth, Email)               │
 └─────────────────────┴───────────────────────────────────────┘
 ```
 
