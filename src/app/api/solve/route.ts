@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { SolutionResponse, AgentType } from '@/types';
 import { classifyQuestion } from '@/lib/ai/agents';
-import { processImageWithNIM } from '@/lib/nim/client';
+import { processImageWithGemini } from '@/lib/ocr/gemini';
 import { routeQuestion, solveProblem, verifySolution } from '@/lib/ai/nemotron';
 import { validateInput, validateOutput } from '@/lib/guardrails/config';
 
@@ -25,22 +25,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 1. OCR 처리 (NVIDIA NIM)
+    // 1. OCR 처리 (Gemini Vision)
     let extractedText = text || '';
     let ocrTime = 0;
 
     if (imageBase64) {
-      if (IS_DEMO_MODE) {
-        // 데모 모드: 샘플 텍스트 사용
-        extractedText = `바닥 면적이 200m²인 사무실에 평균 조도 500lx를 얻고자 한다.
-광원의 광속이 3000lm이고, 조명률 0.6, 감광보상률 1.3일 때 필요한 등 수는?`;
-        ocrTime = 0.5;
-      } else {
-        // 실제 NIM API 호출
-        const ocrResult = await processImageWithNIM(imageBase64);
+      // Gemini Vision API 호출
+      const ocrResult = await processImageWithGemini(imageBase64);
+      if (ocrResult.confidence > 0) {
         extractedText = ocrResult.text;
-        ocrTime = ocrResult.processingTime;
       }
+      ocrTime = ocrResult.processingTime;
     }
 
     if (!extractedText) {
